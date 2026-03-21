@@ -93,6 +93,8 @@ export interface WaitlistItem {
 export interface Profile {
   id: string;
   email: string | null;
+  /** Nome exibido no app (avatar, etc.); opcional. */
+  display_name: string | null;
   is_superadmin: boolean;
   created_at: string;
   updated_at: string;

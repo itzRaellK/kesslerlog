@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { Gamepad2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const fieldClass =
+  "rounded-lg border-emerald-500/25 bg-background transition-colors hover:border-emerald-500/35 focus-visible:border-emerald-500/40 focus-visible:ring-emerald-500/35 dark:border-emerald-500/20 dark:hover:border-emerald-500/30";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,54 +38,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex items-center justify-center gap-2">
-          <Gamepad2 className="h-8 w-8 text-primary" />
-          <span className="text-xl font-semibold">KesslerLog</span>
+    <AuthShell subtitle="Entre na sua conta para continuar.">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-foreground">
+            E-mail
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            className={cn(fieldClass)}
+            autoComplete="email"
+            required
+          />
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="rounded-md"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md"
-              required
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-          <Button
-            type="submit"
-            className="w-full rounded-md"
-            disabled={loading}
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-foreground">
+            Senha
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={cn(fieldClass)}
+            autoComplete="current-password"
+            required
+          />
+        </div>
+        {error ? (
+          <p
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
           >
-            {loading ? "Entrando…" : "Entrar"}
-          </Button>
-        </form>
-        <p className="text-center text-sm text-muted-foreground">
-          Não tem conta?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            Cadastrar
-          </Link>
-        </p>
-      </div>
-    </div>
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          className={cn(
+            "h-11 w-full rounded-lg border border-emerald-500/20 bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-900/30 transition hover:bg-emerald-500 focus-visible:ring-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:shadow-emerald-950/40",
+          )}
+          disabled={loading}
+        >
+          {loading ? "Entrando…" : "Entrar"}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

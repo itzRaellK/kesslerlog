@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserAccountMenu } from "@/components/UserAccountMenu";
 import { cn } from "@/lib/utils";
 
 const navItems: {
@@ -118,13 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <button
-              type="button"
-              className="flex h-9 w-9 cursor-default items-center justify-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 text-xs font-semibold text-emerald-800 tabular-nums dark:border-emerald-500/30 dark:text-emerald-300"
-              aria-label="Conta"
-            >
-              U
-            </button>
+            <UserAccountMenu />
           </div>
         </div>
       </header>

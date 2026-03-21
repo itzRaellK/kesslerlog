@@ -100,8 +100,12 @@ drop policy if exists "profiles_select" on public.profiles;
 drop policy if exists "profiles_insert" on public.profiles;
 drop policy if exists "profiles_update" on public.profiles;
 create policy "profiles_select" on public.profiles for select to authenticated using (auth.uid() = id);
-create policy "profiles_insert" on public.profiles for insert to authenticated with check (auth.uid() = id);
-create policy "profiles_update" on public.profiles for update to authenticated using (auth.uid() = id);
+-- Cliente não pode criar perfil já como superadmin
+create policy "profiles_insert" on public.profiles for insert to authenticated
+  with check (auth.uid() = id and is_superadmin = false);
+create policy "profiles_update" on public.profiles for update to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 -- Superadmin: CRUD em tipos
 drop policy if exists "genre_types_insert_superadmin" on public.genre_types;

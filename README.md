@@ -11,7 +11,7 @@ Aplicação web para acompanhar jogos, sessões com cronômetro, ciclos e review
 
 ## Estrutura
 
-- `app/` – páginas (home, jogos, sessoes, stats, configuracoes, login, signup)
+- `app/` – páginas (home, jogos, sessoes, stats, configuracoes, login)
 - `components/` – Layout (topbar), UI (shadcn-style), drawers, páginas
 - `database/` – scripts Supabase:
   - `schema.sql` – tabelas (genre_types, status_types, review_badge_types, games, game_external_scores, cycles, sessions, reviews, waitlist, profiles)
@@ -37,8 +37,9 @@ Aplicação web para acompanhar jogos, sessões com cronômetro, ciclos e review
      - `NEXT_PUBLIC_SUPABASE_URL`
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-4. **Superadmin (opcional)**
-   - Após criar seu usuário pelo signup, no SQL Editor:
+4. **Usuário e superadmin (opcional)**
+   - Crie o usuário no Supabase (**Authentication → Users** ou convite) e faça login em `/login`.
+   - Para superadmin, no SQL Editor:
      ```sql
      insert into public.profiles (id, email, is_superadmin)
      values ('SEU_USER_UID', 'seu@email.com', true)
@@ -52,7 +53,7 @@ Aplicação web para acompanhar jogos, sessões com cronômetro, ciclos e review
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). Sem `.env.local` válido, o app abre mas as chamadas ao Supabase falham; com env configurado, faça signup/login e use o fluxo normal.
+Abre [http://localhost:3000](http://localhost:3000). Sem `.env.local` válido, o app abre mas as chamadas ao Supabase falham; com env configurado, use login com um usuário criado no Supabase.
 
 ## Bordas e tema
 

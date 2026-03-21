@@ -112,6 +112,7 @@ create table if not exists public.waitlist (
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
+  display_name text,
   is_superadmin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -144,5 +145,16 @@ begin
   ) then
     alter table public.games add column game_status_type_id uuid references public.game_status_types(id);
     create index if not exists idx_games_game_status_type_id on public.games(game_status_type_id);
+  end if;
+end $$;
+
+-- Bancos antigos: coluna display_name em profiles
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'display_name'
+  ) then
+    alter table public.profiles add column display_name text;
   end if;
 end $$;
