@@ -244,7 +244,7 @@ export function GamesContent() {
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Lista de espera
           </h2>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-stretch gap-2">
             {waitlistItems.map(
               (
                 item: {
@@ -258,9 +258,9 @@ export function GamesContent() {
               ) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-card px-3 py-2 shadow-sm"
+                  className="flex min-w-[10rem] flex-1 basis-0 items-center gap-2 rounded-xl border border-emerald-500/20 bg-card px-3 py-2 shadow-sm"
                 >
-                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                  <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
                     #{index + 1}
                   </span>
                   <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -272,11 +272,13 @@ export function GamesContent() {
                       />
                     ) : null}
                   </div>
-                  <span className="text-sm font-medium">{item.game_title}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {item.game_title}
+                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-md text-muted-foreground hover:text-destructive"
+                    className="h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:text-destructive"
                     title="Remover da fila"
                     onClick={() => removeFromWaitlist.mutate(item.game_id)}
                     disabled={removeFromWaitlist.isPending}

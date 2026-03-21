@@ -19,10 +19,10 @@ export function MetricCard({
   icon: Icon,
 }: MetricCardProps) {
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className="h-4 w-4 text-emerald-600/90 dark:text-emerald-400/90" />
       </div>
       <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">
         {value}

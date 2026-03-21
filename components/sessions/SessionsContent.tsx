@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  AutocompleteFilterInput,
+  type SuggestItem,
+} from "@/components/AutocompleteFilterInput";
 import { RefreshCw, Play, MessageSquare, ChevronRight } from "lucide-react";
 import { CycleDrawer } from "@/components/games/CycleDrawer";
 import { SessionDrawer } from "@/components/games/SessionDrawer";
@@ -63,105 +66,6 @@ const MONTH_LABEL_BY_KEY: Record<string, string> = {
   "11": "Novembro",
   "12": "Dezembro",
 };
-
-type SuggestItem = {
-  label: string;
-  value: string;
-  /** Texto extra para busca (ex.: mês: "01", "1") sem aparecer na lista */
-  searchExtra?: string;
-};
-
-/** Input com lista de sugestões ao digitar (match por texto). */
-function AutocompleteFilterInput({
-  value,
-  onChange,
-  suggestions,
-  placeholder,
-  className,
-  inputClassName,
-  maxVisible = 8,
-  dropdownClassName,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  suggestions: SuggestItem[];
-  placeholder?: string;
-  className?: string;
-  inputClassName?: string;
-  maxVisible?: number;
-  dropdownClassName?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  const filtered = useMemo(() => {
-    const q = value.trim().toLowerCase();
-    const list = !q
-      ? suggestions
-      : suggestions.filter((s) => {
-          const extra = (s.searchExtra ?? "").toLowerCase();
-          return (
-            s.label.toLowerCase().includes(q) ||
-            s.value.toLowerCase().includes(q) ||
-            extra.includes(q)
-          );
-        });
-    return list.slice(0, maxVisible);
-  }, [value, suggestions, maxVisible]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={rootRef} className={cn("relative", className)}>
-      <Input
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-        className={inputClassName}
-        autoComplete="off"
-        aria-autocomplete="list"
-        aria-expanded={open && filtered.length > 0}
-      />
-      {open && filtered.length > 0 && (
-        <ul
-          className={cn(
-            "absolute z-50 mt-1 w-full overflow-auto rounded-md border border-border bg-card text-foreground shadow-md max-h-48",
-            dropdownClassName,
-          )}
-          role="listbox"
-        >
-          {filtered.map((s, i) => (
-            <li key={`${s.value}-${s.label}-${i}`} role="option">
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onChange(s.value);
-                  setOpen(false);
-                }}
-              >
-                {s.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 export function SessionsContent() {
   const supabase = createClient();
@@ -650,9 +554,12 @@ export function SessionsContent() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Sessões e Reviews</h1>
+        <p className="text-sm text-muted-foreground">
+          Fila, sessões, reviews e histórico filtrável.
+        </p>
       </div>
 
-      <section className="rounded-md border border-border bg-card p-4 space-y-4">
+      <section className="rounded-xl border border-border/60 bg-card/90 p-4 space-y-4">
         <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Fila (até 10)
         </div>
@@ -781,7 +688,7 @@ export function SessionsContent() {
         )}
       </section>
 
-      <section className="rounded-md border border-border bg-card p-4 space-y-4">
+      <section className="rounded-xl border border-border/60 bg-card/90 p-4 space-y-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -819,7 +726,6 @@ export function SessionsContent() {
               onChange={setHistoryGameFilter}
               suggestions={gameSuggestItems}
               placeholder="Digite para buscar o jogo…"
-              inputClassName="rounded-md"
             />
           </div>
 
@@ -832,7 +738,6 @@ export function SessionsContent() {
               onChange={setHistoryCycleFilter}
               suggestions={cycleSuggestItems}
               placeholder="Digite para buscar o ciclo…"
-              inputClassName="rounded-md"
             />
           </div>
 
@@ -843,7 +748,6 @@ export function SessionsContent() {
               onChange={setHistoryMonthFilter}
               suggestions={monthSuggestItems}
               placeholder="Ex.: março"
-              inputClassName="rounded-md"
               maxVisible={12}
               dropdownClassName="max-h-72"
             />
@@ -856,7 +760,6 @@ export function SessionsContent() {
               onChange={setHistoryYearFilter}
               suggestions={yearSuggestItems}
               placeholder="Ex.: 2026"
-              inputClassName="rounded-md"
             />
           </div>
         </div>
