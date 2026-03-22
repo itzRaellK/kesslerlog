@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
-import { Gamepad2, Activity, Star, Clock } from "lucide-react";
+import { Gamepad2, Activity, Clock, Repeat } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useHomeStats } from "@/hooks/use-home-stats";
@@ -136,10 +136,14 @@ export function HomeContent() {
   );
 
   const {
-    gamesCount,
+    gamesRegistered,
+    gamesPlaying,
+    totalCycles,
     totalSessions,
+    reviewsCount,
     avgReviewScore,
     avgSessionScore,
+    avgSessionTimeFormatted,
     totalSessionTimeFormatted,
     recentSessions,
     isLoading,
@@ -233,23 +237,77 @@ export function HomeContent() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
-          label="Jogos Jogados"
-          value={isLoading ? "—" : String(gamesCount)}
+          label="Jogos"
+          stats={
+            isLoading
+              ? [
+                  { label: "Cadastrados", value: "—" },
+                  { label: "Em jogo", value: "—" },
+                ]
+              : [
+                  { label: "Cadastrados", value: String(gamesRegistered) },
+                  { label: "Em jogo", value: String(gamesPlaying) },
+                ]
+          }
           icon={Gamepad2}
         />
         <MetricCard
-          label="Total de Sessões"
-          value={isLoading ? "—" : String(totalSessions)}
+          label="Ciclos"
+          stats={
+            isLoading
+              ? [
+                  { label: "Total", value: "—" },
+                  { label: "Média reviews", value: "—" },
+                ]
+              : [
+                  { label: "Total", value: String(totalCycles) },
+                  {
+                    label: "Média reviews",
+                    value:
+                      reviewsCount > 0 ? avgReviewScore.toFixed(1) : "—",
+                  },
+                ]
+          }
+          icon={Repeat}
+        />
+        <MetricCard
+          label="Sessões"
+          stats={
+            isLoading
+              ? [
+                  { label: "Total", value: "—" },
+                  { label: "Média (sessão)", value: "—" },
+                ]
+              : [
+                  { label: "Total", value: String(totalSessions) },
+                  {
+                    label: "Média (sessão)",
+                    value:
+                      totalSessions > 0
+                        ? avgSessionScore.toFixed(1)
+                        : "—",
+                  },
+                ]
+          }
           icon={Activity}
         />
         <MetricCard
-          label="Média Reviews"
-          value={isLoading ? "—" : avgReviewScore.toFixed(1)}
-          icon={Star}
-        />
-        <MetricCard
-          label="Tempo total (sessões)"
-          value={isLoading ? "—" : totalSessionTimeFormatted}
+          label="Tempo total"
+          stats={
+            isLoading
+              ? [
+                  { label: "Total", value: "—" },
+                  { label: "Média duração", value: "—" },
+                ]
+              : [
+                  { label: "Total", value: totalSessionTimeFormatted },
+                  {
+                    label: "Média duração",
+                    value:
+                      totalSessions > 0 ? avgSessionTimeFormatted : "—",
+                  },
+                ]
+          }
           icon={Clock}
         />
       </div>

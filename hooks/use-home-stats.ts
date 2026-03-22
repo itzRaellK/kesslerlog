@@ -18,15 +18,33 @@ export function useHomeStats(month?: number, year?: number) {
     },
   });
 
-  const gamesPlayed = (gamesWithDetails ?? []).filter(
-    (g: { game_status_name?: string }) =>
-      g.game_status_name?.toLowerCase() !== "não iniciado"
-  );
+  const gamesRegistered = gamesWithDetails?.length ?? 0;
+  const gamesPlaying = (gamesWithDetails ?? []).filter(
+    (g: { game_status_name?: string }) => {
+      const n = g.game_status_name?.toLowerCase() ?? "";
+      return n === "jogando" || n === "rejogando";
+    },
+  ).length;
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["sessions", month, year],
     queryFn: async () => {
       let q = supabase.from("sessions").select("id, game_id, duration_seconds, note, score, created_at");
+      if (month != null && year != null) {
+        const start = new Date(year, month - 1, 1).toISOString();
+        const end = new Date(year, month, 0, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: cyclesInPeriod, isLoading: cyclesLoading } = useQuery({
+    queryKey: ["cycles_with_details", "period", month, year],
+    queryFn: async () => {
+      let q = supabase.from("cycles_with_details").select("id, created_at");
       if (month != null && year != null) {
         const start = new Date(year, month - 1, 1).toISOString();
         const end = new Date(year, month, 0, 23, 59, 59).toISOString();
@@ -74,9 +92,16 @@ export function useHomeStats(month?: number, year?: number) {
         )
       : 0;
 
+  const totalCycles = cyclesInPeriod?.length ?? 0;
+
+  const reviewsCount = reviews?.length ?? 0;
+
   return {
-    gamesCount: gamesPlayed.length,
+    gamesRegistered,
+    gamesPlaying,
+    totalCycles,
     totalSessions,
+    reviewsCount,
     avgReviewScore,
     avgSessionScore,
     avgSessionTimeFormatted: formatDuration(avgSessionTime),
@@ -87,6 +112,7 @@ export function useHomeStats(month?: number, year?: number) {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         ).slice(0, 5)
       : [],
-    isLoading: gamesLoading || sessionsLoading || reviewsLoading,
+    isLoading:
+      gamesLoading || sessionsLoading || reviewsLoading || cyclesLoading,
   };
 }
