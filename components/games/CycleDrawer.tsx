@@ -20,7 +20,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
@@ -50,6 +58,11 @@ export function CycleDrawer({
     id: string;
     name: string;
   } | null>(null);
+  const [cyclePendingRename, setCyclePendingRename] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const supabase = createClient();
   const queryClient = useQueryClient();
 
@@ -202,6 +215,32 @@ export function CycleDrawer({
     onError: (err) => toastError(getErrorMessage(err)),
   });
 
+  const renameCycle = useMutation({
+    mutationFn: async (payload: { id: string; name: string }) => {
+      const trimmed = payload.name.trim();
+      if (!trimmed) throw new Error("Informe um nome");
+      const { error } = await supabase
+        .from("cycles")
+        .update({ name: trimmed })
+        .eq("id", payload.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cycles"] });
+      queryClient.invalidateQueries({ queryKey: ["cycles_with_details"] });
+      queryClient.invalidateQueries({
+        queryKey: ["cycles_active_by_game_queue"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["cycles_finished_by_game_queue"],
+      });
+      setCyclePendingRename(null);
+      setRenameDraft("");
+      toastSuccess("Ciclo renomeado");
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  });
+
   const deleteCycle = useMutation({
     mutationFn: async (cycleId: string) => {
       if (!gameId) throw new Error("Jogo não encontrado");
@@ -251,28 +290,23 @@ export function CycleDrawer({
     onError: (err) => toastError(getErrorMessage(err)),
   });
 
-  const nCycles = gameCycles.length;
-
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
           <SheetHeader className="space-y-0 px-6 pb-4 pt-6 text-left">
             <SheetTitle className="sr-only">Ciclos</SheetTitle>
-            <DrawerGameHeader label="Ciclos" gameName={gameName}>
-              <div className="flex flex-wrap items-center gap-2">
-                <MetricEmeraldBlock
-                  label="Neste jogo"
-                  valueClassName="text-emerald-800 dark:text-emerald-300"
-                  className="inline-block min-w-[10rem]"
-                >
-                  {nCycles} {nCycles === 1 ? "ciclo" : "ciclos"} no total
-                </MetricEmeraldBlock>
-              </div>
-            </DrawerGameHeader>
+            <DrawerGameHeader label="Ciclos" gameName={gameName} />
           </SheetHeader>
 
-          <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-8">
+          {/* Mesma faixa que Sessão/Review: rótulo em caps; neste drawer não há seletor (lista abaixo) */}
+          <div className="shrink-0 border-b border-border bg-muted/30 px-6 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Ciclos deste jogo
+            </p>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-5 flex flex-col gap-8">
             <section className="space-y-3">
               <div>
                 <p className="text-xs font-semibold text-foreground">
@@ -336,11 +370,14 @@ export function CycleDrawer({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1 space-y-1">
-                            <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+                            <p className="text-sm font-semibold leading-snug text-app-title line-clamp-2">
                               {cycle.name}
                             </p>
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-                              <MetricEmeraldBlock label="Sessões">
+                              <MetricEmeraldBlock
+                                label="Sessões"
+                                valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                              >
                                 {sessions}
                               </MetricEmeraldBlock>
                               <MetricEmeraldBlock
@@ -367,21 +404,41 @@ export function CycleDrawer({
                             >
                               {cycle.status_name}
                             </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              title="Excluir ciclo"
-                              disabled={deleteCycle.isPending}
-                              onClick={() =>
-                                setCyclePendingDelete({
-                                  id: cycle.id,
-                                  name: cycle.name,
-                                })
-                              }
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-0.5">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-md text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300"
+                                title="Renomear ciclo"
+                                type="button"
+                                disabled={renameCycle.isPending}
+                                onClick={() => {
+                                  setCyclePendingRename({
+                                    id: cycle.id,
+                                    name: cycle.name,
+                                  });
+                                  setRenameDraft(cycle.name);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Excluir ciclo"
+                                type="button"
+                                disabled={deleteCycle.isPending}
+                                onClick={() =>
+                                  setCyclePendingDelete({
+                                    id: cycle.id,
+                                    name: cycle.name,
+                                  })
+                                }
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                         {cycle.status_name?.toLowerCase() !== "finalizado" &&
@@ -435,6 +492,74 @@ export function CycleDrawer({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!cyclePendingRename}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCyclePendingRename(null);
+            setRenameDraft("");
+          }
+        }}
+      >
+        <DialogContent className="rounded-xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renomear ciclo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <Label htmlFor="cycle-rename-input">Nome</Label>
+            <Input
+              id="cycle-rename-input"
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              placeholder="Nome do ciclo"
+              className="h-10 rounded-lg border-emerald-500/20 bg-background text-sm focus-visible:ring-emerald-500/30"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameDraft.trim()) {
+                  e.preventDefault();
+                  if (cyclePendingRename)
+                    renameCycle.mutate({
+                      id: cyclePendingRename.id,
+                      name: renameDraft,
+                    });
+                }
+              }}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-lg"
+              onClick={() => {
+                setCyclePendingRename(null);
+                setRenameDraft("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={
+                !renameDraft.trim() ||
+                renameCycle.isPending ||
+                (cyclePendingRename != null &&
+                  renameDraft.trim() === cyclePendingRename.name.trim())
+              }
+              onClick={() => {
+                if (!cyclePendingRename) return;
+                renameCycle.mutate({
+                  id: cyclePendingRename.id,
+                  name: renameDraft,
+                });
+              }}
+            >
+              {renameCycle.isPending ? "Salvando…" : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

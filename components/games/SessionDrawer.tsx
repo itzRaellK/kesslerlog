@@ -419,7 +419,7 @@ export function SessionDrawer({
                             <>
                               {" "}
                               · média{" "}
-                              <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                              <span className="font-medium text-foreground">
                                 {Number(c.avg_session_score).toFixed(1)}
                               </span>
                             </>
@@ -524,29 +524,31 @@ export function SessionDrawer({
                         key={s.id}
                         className="rounded-xl border border-border/60 bg-card p-4"
                       >
-                        <p className="text-xs font-medium text-foreground">
-                          {formatSessionWhen(s.created_at)}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <MetricEmeraldBlock
-                            label="Gameplay"
-                            valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
-                            className="min-w-0 flex-1 sm:max-w-[9rem]"
-                          >
-                            {formatDuration(s.duration_seconds ?? 0)}
-                          </MetricEmeraldBlock>
-                          <MetricEmeraldBlock
-                            label="Nota"
-                            valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
-                            className="min-w-0 flex-1 sm:max-w-[6rem]"
-                          >
-                            {typeof s.score === "number"
-                              ? s.score.toFixed(1)
-                              : "—"}
-                          </MetricEmeraldBlock>
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] sm:items-center sm:gap-3">
+                          <p className="min-w-0 text-sm font-medium leading-snug text-app-title tabular-nums">
+                            {formatSessionWhen(s.created_at)}
+                          </p>
+                          <div className="grid w-full grid-cols-2 gap-2 sm:justify-self-end">
+                            <MetricEmeraldBlock
+                              label="Gameplay"
+                              valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
+                              className="min-w-0 w-full"
+                            >
+                              {formatDuration(s.duration_seconds ?? 0)}
+                            </MetricEmeraldBlock>
+                            <MetricEmeraldBlock
+                              label="Nota"
+                              valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                              className="min-w-0 w-full"
+                            >
+                              {typeof s.score === "number"
+                                ? s.score.toFixed(1)
+                                : "—"}
+                            </MetricEmeraldBlock>
+                          </div>
                         </div>
                         {(s.note ?? "").trim() !== "" && (
-                          <p className="mt-2 text-sm text-muted-foreground">
+                          <p className="mt-2 text-sm leading-relaxed text-app-body">
                             {s.note}
                           </p>
                         )}
@@ -568,7 +570,7 @@ export function SessionDrawer({
                             className="h-8 rounded-md border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
                             onClick={() => setSessionIdToDelete(s.id)}
                           >
-                            <Trash2 className="mr-1.5 h-3 w-3" />
+                            <Trash2 className="mr-1.5 h-3 w-3 text-destructive" />
                             Excluir
                           </Button>
                         </div>

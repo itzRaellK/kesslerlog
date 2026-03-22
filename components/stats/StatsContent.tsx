@@ -1162,15 +1162,15 @@ export function StatsContent() {
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground">
                   <th className="px-4 py-3 text-left font-medium">Jogo</th>
-                  <th className="px-4 py-3 text-left font-medium">Gênero</th>
-                  <th className="px-4 py-3 text-left font-medium">Sessões</th>
-                  <th className="px-4 py-3 text-left font-medium">
+                  <th className="px-4 py-3 text-center font-medium">Gênero</th>
+                  <th className="px-4 py-3 text-center font-medium">Sessões</th>
+                  <th className="px-4 py-3 text-center font-medium">
                     Tempo total
                   </th>
-                  <th className="px-4 py-3 text-left font-medium">
+                  <th className="px-4 py-3 text-center font-medium">
                     Média sessão
                   </th>
-                  <th className="px-4 py-3 text-left font-medium">Review</th>
+                  <th className="px-4 py-3 text-center font-medium">Review</th>
                 </tr>
               </thead>
               <tbody>
@@ -1198,25 +1198,29 @@ export function StatsContent() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
+                    <td className="px-4 py-3 text-center align-middle">
+                      <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
                         {game.genre_name}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-center align-middle text-sm tabular-nums text-muted-foreground">
                       {game.sessions_count}
                     </td>
-                    <td className="px-4 py-3 text-sm tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-center align-middle text-sm tabular-nums text-muted-foreground">
                       {formatDuration(game.total_duration_seconds ?? 0)}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {game.avg_session_score > 0
-                        ? game.avg_session_score.toFixed(1)
-                        : "—"}
+                    <td className="px-4 py-3 text-center align-middle text-sm font-medium tabular-nums">
+                      {game.avg_session_score > 0 ? (
+                        <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
+                          {game.avg_session_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium tabular-nums">
+                    <td className="px-4 py-3 text-center align-middle text-sm font-medium tabular-nums">
                       {game.avg_review_score > 0 ? (
-                        <span className="text-emerald-700 dark:text-emerald-400">
+                        <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
                           {game.avg_review_score.toFixed(1)}
                         </span>
                       ) : (

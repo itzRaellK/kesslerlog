@@ -607,7 +607,7 @@ export function ReviewDrawer({
                       <div className="space-y-3 rounded-xl border border-border/60 bg-card p-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+                            <p className="text-sm font-semibold leading-snug text-app-title line-clamp-2">
                               {selectedCycleMeta.name}
                             </p>
                             <Badge
@@ -625,7 +625,10 @@ export function ReviewDrawer({
                         </div>
 
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          <MetricEmeraldBlock label="Sessões">
+                          <MetricEmeraldBlock
+                            label="Sessões"
+                            valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                          >
                             {selectedCycleMeta.sessions_count ?? 0}
                           </MetricEmeraldBlock>
                           <MetricEmeraldBlock
@@ -679,12 +682,12 @@ export function ReviewDrawer({
                               >
                                 <SelectValue placeholder="Selecione uma review">
                                   {selectedHistoryReview ? (
-                                    <span className="line-clamp-2 text-left text-sm">
+                                    <span className="line-clamp-2 text-left text-sm text-app-title">
                                       {formatReviewWhen(
                                         selectedHistoryReview.created_at,
                                       )}{" "}
                                       · nota{" "}
-                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                      <span className="font-medium">
                                         {Number(
                                           selectedHistoryReview.score,
                                         ).toFixed(1)}
@@ -704,12 +707,12 @@ export function ReviewDrawer({
                                     className="cursor-pointer py-2.5 pl-8 pr-2"
                                   >
                                     <span className="flex flex-col gap-0.5 text-left">
-                                      <span className="line-clamp-2 font-medium leading-snug">
+                                      <span className="line-clamp-2 text-sm font-medium leading-snug text-app-title">
                                         {formatReviewWhen(r.created_at)}
                                       </span>
                                       <span className="text-[11px] text-muted-foreground">
                                         nota{" "}
-                                        <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                        <span className="font-medium text-foreground">
                                           {Number(r.score).toFixed(1)}
                                         </span>{" "}
                                         · {r.review_badge_types?.name ?? "—"}
@@ -728,7 +731,7 @@ export function ReviewDrawer({
                               <p className="text-[10px] font-medium uppercase text-muted-foreground">
                                 Ciclo
                               </p>
-                              <p className="text-sm font-semibold leading-snug">
+                              <p className="text-sm font-semibold leading-snug text-app-title">
                                 {selectedHistoryReview.cycles?.name ?? "—"}
                               </p>
                             </div>
@@ -769,7 +772,7 @@ export function ReviewDrawer({
                                 <p className="text-[10px] font-medium uppercase text-muted-foreground">
                                   Resumo
                                 </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-emerald-800 dark:text-emerald-300">
+                                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-app-body">
                                   {selectedHistoryReview.text}
                                 </p>
                               </div>
@@ -797,7 +800,7 @@ export function ReviewDrawer({
                                   setReviewIdToDelete(selectedHistoryReview.id)
                                 }
                               >
-                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                <Trash2 className="mr-2 h-3.5 w-3.5 text-destructive" />
                                 Excluir
                               </Button>
                             </div>

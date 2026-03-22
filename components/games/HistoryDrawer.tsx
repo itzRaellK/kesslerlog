@@ -259,11 +259,11 @@ export function HistoryDrawer({
       <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
         <SheetHeader className="space-y-0 px-6 pb-4 pt-6 text-left">
           <SheetTitle className="sr-only">Histórico do jogo</SheetTitle>
-          <DrawerGameHeader label="Histórico" gameName={game?.title}>
-            {genre?.name ? (
-              <p className="text-sm text-muted-foreground">{genre.name}</p>
-            ) : null}
-          </DrawerGameHeader>
+          <DrawerGameHeader
+            label="Histórico"
+            gameName={game?.title}
+            genreName={genre?.name ?? undefined}
+          />
         </SheetHeader>
 
         {periodLabel ? (
@@ -360,10 +360,10 @@ export function HistoryDrawer({
                     <div className="border-b border-emerald-500/15 bg-muted/15 px-4 py-3">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-semibold leading-snug text-foreground">
+                          <h3 className="text-sm font-semibold leading-snug text-app-title">
                             {cycle.name}
                           </h3>
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-1 text-[11px] text-app-body">
                             {list.length}{" "}
                             {list.length === 1 ? "sessão" : "sessões"} no período
                           </p>
@@ -380,18 +380,18 @@ export function HistoryDrawer({
                           {cycle.status_name}
                         </Badge>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                      <div className="mt-2.5 flex flex-wrap gap-2">
                         <MetricEmeraldBlock
                           label="Tempo total"
                           valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
-                          className="min-w-[7.5rem]"
+                          className="min-w-0 w-48 shrink-0 max-w-full"
                         >
                           {formatDuration(totalSec)}
                         </MetricEmeraldBlock>
                         <MetricEmeraldBlock
                           label="Média notas"
                           valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
-                          className="min-w-[7.5rem]"
+                          className="min-w-0 w-48 shrink-0 max-w-full"
                         >
                           {avgScore > 0 ? avgScore.toFixed(1) : "—"}
                         </MetricEmeraldBlock>
@@ -406,9 +406,9 @@ export function HistoryDrawer({
                             key={session.id}
                             className="rounded-lg border border-emerald-500/15 bg-background/60 p-3 shadow-sm"
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
+                            <div className="grid grid-cols-1 gap-2.5 border-b border-border/40 pb-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] sm:items-center sm:gap-3">
                               <time
-                                className="text-[11px] font-medium text-muted-foreground"
+                                className="min-w-0 text-sm font-medium leading-snug text-app-title tabular-nums"
                                 dateTime={session.created_at}
                               >
                                 {d.toLocaleDateString("pt-BR", {
@@ -423,18 +423,18 @@ export function HistoryDrawer({
                                   minute: "2-digit",
                                 })}
                               </time>
-                              <div className="flex flex-wrap items-stretch gap-2">
+                              <div className="grid w-full grid-cols-2 gap-2 sm:justify-self-end">
                                 <MetricEmeraldBlock
                                   label="Gameplay"
-                                  valueClassName="font-mono-nums text-sm text-emerald-700 dark:text-emerald-400"
-                                  className="min-w-0 flex-1 sm:max-w-[9rem]"
+                                  valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
+                                  className="min-w-0 w-full"
                                 >
                                   {formatDuration(session.duration_seconds ?? 0)}
                                 </MetricEmeraldBlock>
                                 <MetricEmeraldBlock
                                   label="Nota"
                                   valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
-                                  className="min-w-0 flex-1 sm:max-w-[6rem]"
+                                  className="min-w-0 w-full"
                                 >
                                   {session.score?.toFixed(1) ?? "—"}
                                 </MetricEmeraldBlock>
@@ -444,7 +444,7 @@ export function HistoryDrawer({
                               className={cn(
                                 "mt-2 text-sm leading-relaxed",
                                 (session.note ?? "").trim() !== ""
-                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  ? "text-app-body"
                                   : "text-muted-foreground",
                               )}
                             >
@@ -460,7 +460,7 @@ export function HistoryDrawer({
                     {review ? (
                       <div className="border-t border-border/60 bg-muted/20 px-4 py-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-foreground">
+                          <span className="text-xs font-semibold text-app-title">
                             Review do ciclo
                           </span>
                           <div className="flex flex-wrap items-center gap-2">
@@ -474,8 +474,8 @@ export function HistoryDrawer({
                             ) : null}
                             <MetricEmeraldBlock
                               label="Nota"
-                              valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
-                              className="inline-block min-w-[3.5rem]"
+                              valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                              className="min-w-[5.5rem] shrink-0"
                             >
                               {review.score.toFixed(1)}
                             </MetricEmeraldBlock>
@@ -485,7 +485,7 @@ export function HistoryDrawer({
                           className={cn(
                             "mt-2 text-sm leading-relaxed",
                             review.text?.trim()
-                              ? "text-emerald-800 dark:text-emerald-300"
+                              ? "text-app-body"
                               : "text-muted-foreground",
                           )}
                         >

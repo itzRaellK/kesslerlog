@@ -470,7 +470,7 @@ export function GameDrawer({
                         </div>
                         <div className="rounded-md bg-muted/60 px-2 py-1.5">
                           <span className="text-muted-foreground block">Média</span>
-                          <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                          <span className="font-semibold tabular-nums text-foreground">
                             {(cycle.avg_session_score ?? 0) > 0
                               ? cycle.avg_session_score.toFixed(1)
                               : "—"}
@@ -696,20 +696,20 @@ export function GameDrawer({
                             key={session.id}
                             className="grid grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1 rounded-md border border-border bg-card px-3 py-2.5 text-sm"
                           >
-                            <span className="font-medium tabular-nums text-muted-foreground">
+                            <span className="font-medium tabular-nums text-app-title">
                               {new Date(session.created_at).toLocaleDateString("pt-BR")}
                             </span>
-                            <span className="tabular-nums text-muted-foreground">
+                            <span className="tabular-nums text-app-body text-sm">
                               {formatDuration(session.duration_seconds)}
                             </span>
-                            <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                            <span className="font-semibold tabular-nums text-foreground">
                               {session.score.toFixed(1)}
                             </span>
                             <p
                               className={cn(
                                 "col-span-3 min-h-[1.25rem] break-words text-xs leading-relaxed line-clamp-4",
                                 session.note
-                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  ? "text-app-body"
                                   : "text-muted-foreground",
                               )}
                               title={session.note || undefined}
@@ -727,7 +727,7 @@ export function GameDrawer({
                               <Badge variant="secondary" className="text-[10px] rounded-md">
                                 {cycle.review.badge_name}
                               </Badge>
-                              <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                              <span className="text-sm font-semibold tabular-nums text-foreground">
                                 {cycle.review.score.toFixed(1)}
                               </span>
                             </div>
@@ -736,7 +736,7 @@ export function GameDrawer({
                             className={cn(
                               "break-words text-sm leading-relaxed line-clamp-4",
                               cycle.review.text?.trim()
-                                ? "text-emerald-800 dark:text-emerald-300"
+                                ? "text-app-body"
                                 : "text-muted-foreground",
                             )}
                           >

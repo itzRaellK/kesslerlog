@@ -362,9 +362,12 @@ export function HomeContent() {
                         {formatDuration(cycle.total_duration_seconds ?? 0)}
                       </span>
                       {(cycle.avg_session_score ?? 0) > 0 && (
-                        <span className="tabular-nums font-medium text-emerald-700 dark:text-emerald-400">
+                        <Badge
+                          variant="secondary"
+                          className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0 text-[10px] font-medium tabular-nums text-emerald-800 dark:text-emerald-400"
+                        >
                           ⌀ {cycle.avg_session_score}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -414,15 +417,20 @@ export function HomeContent() {
                     <div className="min-w-0 flex-1 pt-0.5">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium">{game?.title}</p>
-                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                          <p className="text-sm font-medium text-app-title">
+                            {game?.title}
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-app-body">
                             {session.note || "—"}
                           </p>
                         </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        <div className="shrink-0 flex flex-col items-end gap-1 text-right">
+                          <Badge
+                            variant="secondary"
+                            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-400"
+                          >
                             {session.score?.toFixed(1)}
-                          </p>
+                          </Badge>
                           <p className="text-[11px] tabular-nums text-muted-foreground">
                             {formatDuration(session.duration_seconds ?? 0)}
                           </p>

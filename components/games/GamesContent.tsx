@@ -244,7 +244,7 @@ export function GamesContent() {
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Lista de espera
           </h2>
-          <div className="flex w-full flex-wrap items-stretch gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {waitlistItems.map(
               (
                 item: {
@@ -258,7 +258,7 @@ export function GamesContent() {
               ) => (
                 <div
                   key={item.id}
-                  className="flex min-w-[10rem] flex-1 basis-0 items-center gap-2 rounded-xl border border-emerald-500/20 bg-card px-3 py-2 shadow-sm"
+                  className="flex h-[3.25rem] min-w-0 max-w-full items-center gap-2 rounded-xl border border-emerald-500/20 bg-card px-2.5 py-2 shadow-sm"
                 >
                   <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
                     #{index + 1}
@@ -297,12 +297,12 @@ export function GamesContent() {
           <thead>
             <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground">
               <th className="px-4 py-3 text-left font-medium">Jogo</th>
-              <th className="px-4 py-3 text-left font-medium">Gênero</th>
-              <th className="px-4 py-3 text-left font-medium">
+              <th className="px-4 py-3 text-center font-medium">Gênero</th>
+              <th className="px-4 py-3 text-center font-medium">
                 Notas Externas
               </th>
-              <th className="px-4 py-3 text-left font-medium">Cadastro</th>
-              <th className="px-4 py-3 text-right font-medium">Ações</th>
+              <th className="px-4 py-3 text-center font-medium">Cadastro</th>
+              <th className="px-4 py-3 text-center font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -337,17 +337,17 @@ export function GamesContent() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
+                    <td className="px-4 py-3 text-center align-middle">
+                      <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
                         {game.genre_name}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1.5 flex-wrap">
+                    <td className="px-4 py-3 text-center align-middle">
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
                         {externalScores.map((es, i) => (
                           <span
                             key={i}
-                            className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] tabular-nums font-medium text-emerald-800 dark:text-emerald-400"
+                            className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] tabular-nums font-medium text-emerald-800 dark:text-emerald-400"
                           >
                             {es.source}{" "}
                             <span className="ml-1 font-semibold tabular-nums">
@@ -362,11 +362,11 @@ export function GamesContent() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                    <td className="px-4 py-3 text-center align-middle text-sm text-muted-foreground">
                       {new Date(game.created_at).toLocaleDateString("pt-BR")}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-4 py-3 text-center align-middle">
+                      <div className="flex items-center justify-center gap-1">
                         {gameIdsInWaitlist.has(game.id) ? (
                           <Button
                             variant="ghost"
@@ -414,13 +414,13 @@ export function GamesContent() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-md text-destructive hover:text-destructive"
+                          className="h-7 w-7 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive"
                           title="Excluir"
                           onClick={() =>
                             setGameToDelete({ id: game.id, title: game.title })
                           }
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
                     </td>

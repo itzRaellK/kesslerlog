@@ -778,7 +778,7 @@ export function SessionsContent() {
                   <summary className="flex cursor-pointer list-none items-start gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden hover:bg-muted/30 rounded-xl">
                     <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-base font-semibold leading-tight">
+                      <p className="text-base font-semibold leading-tight text-app-title">
                         {entry.gameTitle}
                       </p>
                       <p className="text-sm text-muted-foreground leading-snug">
@@ -826,14 +826,14 @@ export function SessionsContent() {
                             {/* Data por extenso (dia, mês, ano) – horário | chips duração + média */}
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="min-w-0 text-sm leading-snug">
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium text-app-title">
                                   {longDate}
                                 </span>
-                                <span className="text-muted-foreground/80">
+                                <span className="text-app-body">
                                   {" "}
                                   –{" "}
                                 </span>
-                                <span className="font-semibold tabular-nums text-foreground">
+                                <span className="font-semibold tabular-nums text-app-title">
                                   {timePart}
                                 </span>
                               </div>
@@ -857,7 +857,7 @@ export function SessionsContent() {
                               className={cn(
                                 "mt-2 break-words text-sm leading-relaxed",
                                 (s.note ?? "").trim() !== ""
-                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  ? "text-app-body"
                                   : "text-muted-foreground",
                               )}
                               title={s.note?.trim() ? s.note : undefined}
