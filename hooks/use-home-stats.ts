@@ -56,6 +56,7 @@ export function useHomeStats(month?: number, year?: number) {
   const totalSessions = sessions?.length ?? 0;
   const totalPlaytime = sessions?.reduce((acc, s) => acc + (s.duration_seconds ?? 0), 0) ?? 0;
   const avgSessionTime = totalSessions > 0 ? Math.floor(totalPlaytime / totalSessions) : 0;
+  const totalSessionTimeFormatted = formatDuration(totalPlaytime);
   const avgSessionScore =
     sessions?.length && sessions.length > 0
       ? Number(
@@ -79,6 +80,7 @@ export function useHomeStats(month?: number, year?: number) {
     avgReviewScore,
     avgSessionScore,
     avgSessionTimeFormatted: formatDuration(avgSessionTime),
+    totalSessionTimeFormatted,
     recentSessions: sessions
       ? [...sessions].sort(
           (a, b) =>

@@ -1235,6 +1235,8 @@ export function StatsContent() {
         open={historyDrawer.open}
         onOpenChange={(o) => setHistoryDrawer({ ...historyDrawer, open: o })}
         gameId={historyDrawer.gameId}
+        periodMonth={monthNum}
+        periodYear={yearNum}
       />
     </div>
   );

@@ -14,6 +14,22 @@ import {
   type SuggestItem,
 } from "@/components/AutocompleteFilterInput";
 
+/** Nomes completos dos meses no filtro e nas sugestões. */
+const MONTH_NAMES_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+] as const;
+
 const MONTH_SHORT = [
   "Jan",
   "Fev",
@@ -46,14 +62,14 @@ const MONTH_LONG_PT = [
 
 const HOME_MONTH_ROWS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
-  label: MONTH_SHORT[i],
+  label: MONTH_NAMES_PT[i],
 }));
 
 function homeMonthSuggestItems(): SuggestItem[] {
   return HOME_MONTH_ROWS.map((m, i) => ({
     label: m.label,
     value: m.label,
-    searchExtra: `${m.value} ${String(m.value).padStart(2, "0")} ${MONTH_LONG_PT[i]}`,
+    searchExtra: `${m.value} ${String(m.value).padStart(2, "0")} ${MONTH_SHORT[i]} ${MONTH_LONG_PT[i]}`,
   }));
 }
 
@@ -97,7 +113,7 @@ const currentYear = currentDate.getFullYear();
 
 export function HomeContent() {
   const [monthText, setMonthText] = useState<string>(
-    () => HOME_MONTH_ROWS[currentMonth - 1].label,
+    () => MONTH_NAMES_PT[currentMonth - 1],
   );
   const [yearText, setYearText] = useState(() => String(currentYear));
 
@@ -124,7 +140,7 @@ export function HomeContent() {
     totalSessions,
     avgReviewScore,
     avgSessionScore,
-    avgSessionTimeFormatted,
+    totalSessionTimeFormatted,
     recentSessions,
     isLoading,
   } = useHomeStats(monthNum, yearNum);
@@ -232,8 +248,8 @@ export function HomeContent() {
           icon={Star}
         />
         <MetricCard
-          label="Tempo Médio/Sessão"
-          value={avgSessionTimeFormatted}
+          label="Tempo total (sessões)"
+          value={isLoading ? "—" : totalSessionTimeFormatted}
           icon={Clock}
         />
       </div>
@@ -362,7 +378,7 @@ export function HomeContent() {
                       <p className="mt-2 text-[11px] text-muted-foreground">
                         {date.toLocaleDateString("pt-BR", {
                           day: "2-digit",
-                          month: "short",
+                          month: "long",
                           year: "numeric",
                         })}{" "}
                         •{" "}

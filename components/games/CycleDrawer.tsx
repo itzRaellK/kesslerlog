@@ -25,6 +25,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import {
   toastSuccess,
@@ -258,11 +259,8 @@ export function CycleDrawer({
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-[min(100vw,640px)] flex-col gap-0 overflow-y-auto rounded-l-md sm:max-w-[640px]"
-      >
-        <SheetHeader className="space-y-0 text-left">
+      <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
+        <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
           <SheetTitle className="sr-only">Ciclos</SheetTitle>
           <DrawerGameHeader label="Ciclos" gameName={gameName}>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -273,7 +271,7 @@ export function CycleDrawer({
           </DrawerGameHeader>
         </SheetHeader>
 
-        <div className="mt-6 flex flex-1 flex-col gap-8 pb-2">
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-8">
           <section className="space-y-3">
             <div>
               <p className="text-xs font-semibold text-foreground">

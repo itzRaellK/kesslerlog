@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -7,23 +8,80 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
+import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
+
+const MONTH_NAMES_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+] as const;
+
+type SessionRow = {
+  id: string;
+  cycle_id: string;
+  created_at: string;
+  duration_seconds: number;
+  score: number;
+  note: string | null;
+};
+
+type CycleRow = {
+  id: string;
+  name: string;
+  status_name: string;
+  created_at: string;
+};
 
 interface HistoryDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gameId?: string;
+  /** Quando definidos (ex.: filtros da página Stats), só sessões neste mês/ano. */
+  periodMonth?: number;
+  periodYear?: number;
 }
 
 export function HistoryDrawer({
   open,
   onOpenChange,
   gameId,
+  periodMonth,
+  periodYear,
 }: HistoryDrawerProps) {
   const supabase = createClient();
+  const [selectedCycleId, setSelectedCycleId] = useState<string>("__all__");
+
+  const periodActive =
+    periodMonth != null &&
+    periodYear != null &&
+    periodMonth >= 1 &&
+    periodMonth <= 12;
+
+  useEffect(() => {
+    if (open) setSelectedCycleId("__all__");
+  }, [open, gameId, periodMonth, periodYear]);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -31,7 +89,7 @@ export function HistoryDrawer({
       if (!gameId) return null;
       const { data, error } = await supabase
         .from("games")
-        .select("id, title")
+        .select("id, title, image_url")
         .eq("id", gameId)
         .single();
       if (error) throw error;
@@ -61,165 +119,374 @@ export function HistoryDrawer({
     enabled: !!gameId && open,
   });
 
-  const { data: cyclesWithSessions = [] } = useQuery({
-    queryKey: ["cycles_history", gameId],
+  const { data: cycles = [] } = useQuery({
+    queryKey: ["cycles_history_drawer", gameId],
     queryFn: async () => {
       if (!gameId) return [];
-      const { data: cycles, error: ce } = await supabase
+      const { data, error } = await supabase
         .from("cycles_with_details")
-        .select("*")
+        .select("id, name, status_name, created_at")
         .eq("game_id", gameId)
         .order("created_at", { ascending: false });
-      if (ce) throw ce;
-      const result: Array<{
-        id: string;
-        name: string;
-        status_name: string;
-        sessions: Array<{
-          id: string;
-          created_at: string;
-          duration_seconds: number;
-          score: number;
-          note: string | null;
-        }>;
-        review?: { score: number; text: string | null; badge_name: string };
-      }> = [];
-      for (const c of cycles ?? []) {
-        const { data: sessions } = await supabase
-          .from("sessions")
-          .select("id, created_at, duration_seconds, score, note")
-          .eq("cycle_id", c.id)
-          .order("created_at");
-        const { data: rev } = await supabase
-          .from("reviews")
-          .select("score, text, review_badge_type_id")
-          .eq("cycle_id", c.id)
-          .maybeSingle();
-        let badgeName = "";
-        if (rev?.review_badge_type_id) {
-          const { data: bt } = await supabase
-            .from("review_badge_types")
-            .select("name")
-            .eq("id", rev.review_badge_type_id)
-            .single();
-          badgeName = bt?.name ?? "";
-        }
-        result.push({
-          id: c.id,
-          name: c.name,
-          status_name: c.status_name,
-          sessions: (sessions ?? []).map((s) => ({
-            id: s.id,
-            created_at: s.created_at,
-            duration_seconds: s.duration_seconds,
-            score: s.score,
-            note: s.note,
-          })),
-          review: rev
-            ? {
-                score: rev.score,
-                text: rev.text,
-                badge_name: badgeName,
-              }
-            : undefined,
-        });
-      }
-      return result;
+      if (error) throw error;
+      return (data ?? []) as CycleRow[];
     },
     enabled: !!gameId && open,
   });
 
+  const { data: sessions = [] } = useQuery({
+    queryKey: [
+      "history_drawer_sessions",
+      gameId,
+      periodMonth,
+      periodYear,
+      periodActive,
+    ],
+    queryFn: async () => {
+      if (!gameId) return [];
+      let q = supabase
+        .from("sessions")
+        .select("id, cycle_id, created_at, duration_seconds, score, note")
+        .eq("game_id", gameId)
+        .order("created_at", { ascending: false });
+      if (periodActive) {
+        const start = new Date(periodYear!, periodMonth! - 1, 1).toISOString();
+        const end = new Date(
+          periodYear!,
+          periodMonth!,
+          0,
+          23,
+          59,
+          59,
+        ).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as SessionRow[];
+    },
+    enabled: !!gameId && open,
+  });
+
+  const cycleIdsInData = useMemo(
+    () => [...new Set(sessions.map((s) => s.cycle_id))],
+    [sessions],
+  );
+
+  const { data: reviewsByCycleId = {} } = useQuery({
+    queryKey: ["history_drawer_reviews", gameId, cycleIdsInData.join(",")],
+    queryFn: async () => {
+      if (!gameId || cycleIdsInData.length === 0) return {};
+      const { data: revs, error } = await supabase
+        .from("reviews")
+        .select("cycle_id, score, text, review_badge_type_id")
+        .eq("game_id", gameId)
+        .in("cycle_id", cycleIdsInData);
+      if (error) throw error;
+      const list = revs ?? [];
+      const badgeIds = [
+        ...new Set(
+          list
+            .map((r) => r.review_badge_type_id)
+            .filter(Boolean) as string[],
+        ),
+      ];
+      let badgeNames: Record<string, string> = {};
+      if (badgeIds.length > 0) {
+        const { data: badges } = await supabase
+          .from("review_badge_types")
+          .select("id, name")
+          .in("id", badgeIds);
+        (badges ?? []).forEach((b: { id: string; name: string }) => {
+          badgeNames[b.id] = b.name;
+        });
+      }
+      const map: Record<
+        string,
+        { score: number; text: string | null; badge_name: string }
+      > = {};
+      for (const r of list) {
+        map[r.cycle_id] = {
+          score: r.score,
+          text: r.text,
+          badge_name: r.review_badge_type_id
+            ? badgeNames[r.review_badge_type_id] ?? ""
+            : "",
+        };
+      }
+      return map;
+    },
+    enabled: !!gameId && open && cycleIdsInData.length > 0,
+  });
+
+  const sessionsByCycle = useMemo(() => {
+    const m: Record<string, SessionRow[]> = {};
+    for (const s of sessions) {
+      if (!m[s.cycle_id]) m[s.cycle_id] = [];
+      m[s.cycle_id].push(s);
+    }
+    for (const id of Object.keys(m)) {
+      m[id].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    }
+    return m;
+  }, [sessions]);
+
+  const cyclesOrdered = useMemo(() => {
+    const withSessions = cycles.filter((c) => (sessionsByCycle[c.id]?.length ?? 0) > 0);
+    return withSessions.length > 0 ? withSessions : cycles;
+  }, [cycles, sessionsByCycle]);
+
+  const cyclesToRender = useMemo(() => {
+    const base =
+      sessions.length > 0
+        ? cyclesOrdered.filter((c) => (sessionsByCycle[c.id]?.length ?? 0) > 0)
+        : cyclesOrdered;
+    if (selectedCycleId === "__all__") return base;
+    return base.filter((c) => c.id === selectedCycleId);
+  }, [cyclesOrdered, sessionsByCycle, selectedCycleId, sessions.length]);
+
+  const periodLabel =
+    periodActive && periodMonth && periodYear
+      ? `${MONTH_NAMES_PT[periodMonth - 1]} de ${periodYear}`
+      : null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-[500px] sm:max-w-[500px] overflow-y-auto rounded-l-md"
-      >
-        <SheetHeader>
-          <SheetTitle className="text-sm font-semibold">Histórico</SheetTitle>
-          {game && (
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">{game.title}</p>
-              {genre && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] rounded-md"
+      <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
+        <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
+          <SheetTitle className="sr-only">Histórico do jogo</SheetTitle>
+          <DrawerGameHeader label="Histórico" gameName={game?.title}>
+            {genre?.name ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border border-emerald-500/25",
+                    "bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium",
+                    "text-emerald-800 dark:text-emerald-400",
+                  )}
                 >
                   {genre.name}
-                </Badge>
-              )}
-            </div>
-          )}
+                </span>
+              </div>
+            ) : null}
+          </DrawerGameHeader>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {cyclesWithSessions.map((cycle) => (
-            <div key={cycle.id} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">{cycle.name}</p>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-[10px] rounded-md",
-                      cycle.status_name?.toLowerCase() === "finalizado"
-                        ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                        : "bg-primary/10 text-primary"
-                    )}
-                  >
-                    {cycle.status_name}
-                  </Badge>
-                </div>
-              </div>
+        {periodLabel ? (
+          <div className="border-b border-border bg-muted/25 px-6 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Período do filtro
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-foreground">
+              {periodLabel}
+            </p>
+          </div>
+        ) : null}
 
-              <div className="space-y-2 pl-3 border-l border-border">
-                {cycle.sessions.map((session) => (
-                  <div key={session.id} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(session.created_at).toLocaleDateString(
-                          "pt-BR"
-                        )}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {formatDuration(session.duration_seconds)}
-                        </span>
-                        <span className="text-xs font-medium tabular-nums text-primary">
-                          {session.score.toFixed(1)}
-                        </span>
+        <div className="shrink-0 border-b border-border bg-muted/20 px-6 py-4">
+          <Label
+            htmlFor="history-cycle-filter"
+            className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Ciclo
+          </Label>
+          <Select
+            value={selectedCycleId}
+            onValueChange={setSelectedCycleId}
+          >
+            <SelectTrigger
+              id="history-cycle-filter"
+              className="mt-2 h-auto min-h-10 w-full rounded-lg border-emerald-500/30 bg-background py-2 text-left"
+            >
+              <SelectValue placeholder="Escolha o ciclo" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg">
+              <SelectItem value="__all__" className="cursor-pointer">
+                {periodActive
+                  ? "Todos os ciclos (neste período)"
+                  : "Todos os ciclos"}
+              </SelectItem>
+              {cyclesOrdered
+                .filter((c) => (sessionsByCycle[c.id]?.length ?? 0) > 0)
+                .map((c) => (
+                  <SelectItem
+                    key={c.id}
+                    value={c.id}
+                    className="cursor-pointer py-2.5"
+                  >
+                    <span className="line-clamp-2 font-medium leading-snug">
+                      {c.name}
+                    </span>
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {!gameId ? (
+            <p className="text-sm text-muted-foreground">Nenhum jogo selecionado.</p>
+          ) : sessions.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-emerald-500/25 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+              {periodActive
+                ? "Nenhuma sessão neste jogo no mês e ano filtrados."
+                : "Nenhuma sessão registrada para este jogo."}
+            </p>
+          ) : (
+            <div className="space-y-8">
+              {cyclesToRender.every(
+                (c) => (sessionsByCycle[c.id]?.length ?? 0) === 0,
+              ) ? (
+                <p className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                  Nenhuma sessão para o ciclo selecionado neste período.
+                </p>
+              ) : null}
+              {cyclesToRender.map((cycle) => {
+                const list = sessionsByCycle[cycle.id] ?? [];
+                if (list.length === 0) return null;
+                const totalSec = list.reduce(
+                  (a, s) => a + (s.duration_seconds ?? 0),
+                  0,
+                );
+                const scores = list.filter((s) => (s.score ?? 0) > 0);
+                const avgScore =
+                  scores.length > 0
+                    ? scores.reduce((a, s) => a + (s.score ?? 0), 0) /
+                      scores.length
+                    : 0;
+                const review = reviewsByCycleId[cycle.id];
+                const finished =
+                  cycle.status_name?.toLowerCase() === "finalizado";
+
+                return (
+                  <section
+                    key={cycle.id}
+                    className="rounded-xl border border-border/70 bg-card/80 shadow-sm"
+                  >
+                    <div className="border-b border-emerald-500/15 bg-muted/15 px-4 py-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-semibold leading-snug text-foreground">
+                            {cycle.name}
+                          </h3>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {list.length}{" "}
+                            {list.length === 1 ? "sessão" : "sessões"} no período
+                          </p>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "shrink-0 rounded-md border text-[10px] font-medium",
+                            finished
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-400"
+                              : "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300",
+                          )}
+                        >
+                          {cycle.status_name}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Tempo total
+                          </p>
+                          <p className="mt-0.5 font-mono-nums text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                            {formatDuration(totalSec)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Média notas
+                          </p>
+                          <p className="mt-0.5 font-mono-nums text-sm font-semibold text-foreground">
+                            {avgScore > 0 ? avgScore.toFixed(1) : "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {session.note || "—"}
-                    </p>
-                  </div>
-                ))}
-              </div>
 
-              {cycle.review && (
-                <div className="rounded-md border border-border bg-muted/50 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">Review</span>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] rounded-md"
-                      >
-                        {cycle.review.badge_name}
-                      </Badge>
-                      <span className="text-sm font-semibold tabular-nums text-primary">
-                        {cycle.review.score.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {cycle.review.text || "—"}
-                  </p>
-                </div>
-              )}
+                    <ul className="space-y-3 p-4">
+                      {list.map((session) => {
+                        const d = new Date(session.created_at);
+                        return (
+                          <li
+                            key={session.id}
+                            className="rounded-lg border border-emerald-500/15 bg-background/60 p-3 shadow-sm"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
+                              <time
+                                className="text-[11px] font-medium text-muted-foreground"
+                                dateTime={session.created_at}
+                              >
+                                {d.toLocaleDateString("pt-BR", {
+                                  weekday: "short",
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })}{" "}
+                                ·{" "}
+                                {d.toLocaleTimeString("pt-BR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </time>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <span className="font-mono-nums text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                  {formatDuration(session.duration_seconds ?? 0)}
+                                </span>
+                                <span className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 font-mono-nums text-xs font-semibold tabular-nums">
+                                  Nota {session.score?.toFixed(1) ?? "—"}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-sm leading-relaxed text-foreground">
+                              {(session.note ?? "").trim() !== ""
+                                ? session.note
+                                : (
+                                    <span className="text-muted-foreground">
+                                      Sem resumo nesta sessão.
+                                    </span>
+                                  )}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {review ? (
+                      <div className="border-t border-border/60 bg-muted/20 px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-foreground">
+                            Review do ciclo
+                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {review.badge_name ? (
+                              <Badge
+                                variant="secondary"
+                                className="rounded-md border border-emerald-500/25 bg-emerald-500/10 text-[10px] text-emerald-800 dark:text-emerald-400"
+                              >
+                                {review.badge_name}
+                              </Badge>
+                            ) : null}
+                            <span className="font-mono-nums text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                              {review.score.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                          {review.text?.trim() ? review.text : "—"}
+                        </p>
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </SheetContent>
     </Sheet>

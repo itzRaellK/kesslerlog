@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useStopwatch } from "@/hooks/use-stopwatch";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
 
 type TabId = "ciclo" | "sessao" | "review";
@@ -38,8 +40,13 @@ export function GameDrawer({
 }: GameDrawerProps) {
   const [activeTab, setActiveTab] = useState<TabId>("ciclo");
   const [newCycleName, setNewCycleName] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const {
+    isRunning,
+    setIsRunning,
+    elapsed,
+    reset: resetStopwatch,
+    getElapsedSeconds,
+  } = useStopwatch();
   const [sessionNote, setSessionNote] = useState("");
   const [sessionScore, setSessionScore] = useState("");
   const [reviewBadge, setReviewBadge] = useState("");
@@ -50,18 +57,11 @@ export function GameDrawer({
   const supabase = createClient();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isRunning) interval = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
   const resetSessionForm = useCallback(() => {
-    setIsRunning(false);
-    setElapsed(0);
+    resetStopwatch();
     setSessionNote("");
     setSessionScore("");
-  }, []);
+  }, [resetStopwatch]);
 
   useEffect(() => {
     if (!open) {
@@ -315,7 +315,7 @@ export function GameDrawer({
         cycle_id: cycleId,
         game_id: gameId,
         user_id: user.user.id,
-        duration_seconds: elapsed,
+        duration_seconds: getElapsedSeconds(),
         note: sessionNote.trim() || null,
         score: scoreNum,
       });
@@ -373,10 +373,7 @@ export function GameDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col rounded-l-md border-l p-0 sm:max-w-[50vw] min-w-[min(100%,400px)] max-w-[min(100%,720px)]"
-      >
+      <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
         <SheetHeader className="border-b border-border px-6 py-4">
           <SheetTitle className="text-base font-semibold">
             {gameName ?? "Jogo"}

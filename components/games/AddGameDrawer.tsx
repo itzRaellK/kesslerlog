@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import {
   GenreAutocompleteInput,
@@ -223,10 +224,7 @@ export function AddGameDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex h-full w-[min(100vw,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[640px]"
-      >
+      <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
         <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
           <SheetTitle className="sr-only">
             {isEdit ? "Editar jogo" : "Adicionar jogo"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useStopwatch } from "@/hooks/use-stopwatch";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 
 type CycleForSession = {
   id: string;
@@ -102,8 +104,13 @@ export function SessionDrawer({
   cycleName: initialCycleName,
 }: SessionDrawerProps) {
   const [activeTab, setActiveTab] = useState<SessionTab>("nova");
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const {
+    isRunning,
+    setIsRunning,
+    elapsed,
+    reset: resetStopwatch,
+    getElapsedSeconds,
+  } = useStopwatch();
   const [note, setNote] = useState("");
   const [score, setScore] = useState("");
   const [selectedCycleId, setSelectedCycleId] = useState<string | undefined>(
@@ -143,11 +150,10 @@ export function SessionDrawer({
   const queryClient = useQueryClient();
 
   const resetTimer = useCallback(() => {
-    setIsRunning(false);
-    setElapsed(0);
+    resetStopwatch();
     setNote("");
     setScore("");
-  }, []);
+  }, [resetStopwatch]);
 
   const { data: activeCycles = [], isPending: cyclesLoading } = useQuery({
     queryKey: ["cycles_active_for_session", gameId],
@@ -210,14 +216,6 @@ export function SessionDrawer({
     if (!open) resetTimer();
   }, [open, resetTimer]);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isRunning) {
-      interval = setInterval(() => setElapsed((e) => e + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
   const invalidateSessionQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["sessions"] });
     queryClient.invalidateQueries({ queryKey: ["sessions_in_cycle", cycleId] });
@@ -237,7 +235,7 @@ export function SessionDrawer({
         cycle_id: cycleId,
         game_id: gameId,
         user_id: user.user.id,
-        duration_seconds: elapsed,
+        duration_seconds: getElapsedSeconds(),
         note: note.trim() || null,
         score: scoreNum,
       });
@@ -354,10 +352,7 @@ export function SessionDrawer({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="flex h-full w-[min(100vw,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[640px]"
-        >
+        <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
           <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
             <SheetTitle className="sr-only">Sessão</SheetTitle>
             <DrawerGameHeader label="Sessão" gameName={gameName} />
@@ -591,53 +586,65 @@ export function SessionDrawer({
         open={!!editingSession}
         onOpenChange={(o) => !o && setEditingSession(null)}
       >
-        <DialogContent className="rounded-xl sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle className="text-base">Editar sessão</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="text-xs">Duração (minutos)</Label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={editDurationMin}
-                onChange={(e) => setEditDurationMin(e.target.value)}
-                placeholder="ex.: 45 ou 1,5"
-                className="h-10 rounded-lg font-mono-nums"
-              />
+        <DialogContent className="max-h-[min(90vh,720px)] w-[min(100vw-1.5rem,800px)] max-w-none rounded-xl border-emerald-500/20 p-0 sm:max-w-none">
+          <div className="border-b border-emerald-500/15 bg-muted/20 px-6 py-4 pr-14">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-base font-semibold">
+                Editar sessão
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Ajuste duração, nota e o resumo da sessão.
+              </p>
+            </DialogHeader>
+          </div>
+          <div className="space-y-5 px-6 py-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
+                <Label className="text-xs font-medium">Duração (minutos)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={editDurationMin}
+                  onChange={(e) => setEditDurationMin(e.target.value)}
+                  placeholder="ex.: 45 ou 1,5"
+                  className="h-10 w-full rounded-lg border-emerald-500/25 font-mono-nums focus-visible:ring-emerald-500/30"
+                />
+              </div>
+              <div className="min-w-0 space-y-2">
+                <Label className="text-xs font-medium">Nota</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={editScore}
+                  onChange={(e) => setEditScore(e.target.value)}
+                  className="h-10 w-full rounded-lg border-emerald-500/25 font-mono-nums focus-visible:ring-emerald-500/30"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Nota</Label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                value={editScore}
-                onChange={(e) => setEditScore(e.target.value)}
-                className="h-10 max-w-[120px] rounded-lg font-mono-nums"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Resumo</Label>
+              <Label className="text-xs font-medium">Resumo</Label>
               <Textarea
                 value={editNote}
                 onChange={(e) => setEditNote(e.target.value)}
-                className="min-h-[100px] resize-none rounded-lg text-sm"
+                placeholder="Texto da sessão…"
+                className="min-h-[200px] resize-y rounded-lg border-emerald-500/25 text-sm leading-relaxed focus-visible:ring-emerald-500/30"
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-border/60 bg-muted/10 px-6 py-4 sm:justify-end">
             <Button
+              type="button"
               variant="outline"
-              className="rounded-lg"
+              className="rounded-lg border-emerald-500/35 text-emerald-900 hover:bg-emerald-500/10 dark:text-emerald-200"
               onClick={() => setEditingSession(null)}
             >
               Cancelar
             </Button>
             <Button
-              className="rounded-lg bg-emerald-600 hover:bg-emerald-700"
+              type="button"
+              className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
               disabled={updateSession.isPending}
               onClick={submitEdit}
             >
