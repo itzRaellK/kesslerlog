@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
+import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 
@@ -353,7 +354,7 @@ export function SessionDrawer({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
-          <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
+          <SheetHeader className="space-y-0 px-6 pb-4 pt-6 text-left">
             <SheetTitle className="sr-only">Sessão</SheetTitle>
             <DrawerGameHeader label="Sessão" gameName={gameName} />
           </SheetHeader>
@@ -366,9 +367,6 @@ export function SessionDrawer({
             >
               Ciclo ativo
             </Label>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Ordem: mais recente no topo. Vários rejogos? Escolha na lista.
-            </p>
             {cyclesLoading ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 Carregando ciclos…
@@ -390,7 +388,7 @@ export function SessionDrawer({
               >
                 <SelectTrigger
                   id="session-cycle-select"
-                  className="mt-3 h-auto min-h-10 w-full rounded-lg border-emerald-500/30 bg-background py-2 text-left [&>span]:line-clamp-none"
+                  className="mt-2 h-auto min-h-10 w-full rounded-lg border-emerald-500/30 bg-background py-2 text-left [&>span]:line-clamp-none"
                 >
                   <SelectValue placeholder="Selecione um ciclo">
                     {cycleName ? (
@@ -417,9 +415,15 @@ export function SessionDrawer({
                         <span className="text-[11px] text-muted-foreground">
                           {formatCycleShortDate(c.created_at)} ·{" "}
                           {c.sessions_count ?? 0} sessões
-                          {Number(c.avg_session_score) > 0
-                            ? ` · média ${Number(c.avg_session_score).toFixed(1)}`
-                            : ""}
+                          {Number(c.avg_session_score) > 0 ? (
+                            <>
+                              {" "}
+                              · média{" "}
+                              <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                {Number(c.avg_session_score).toFixed(1)}
+                              </span>
+                            </>
+                          ) : null}
                         </span>
                       </span>
                     </SelectItem>
@@ -439,9 +443,14 @@ export function SessionDrawer({
                 </p>
 
                 <div className="flex flex-col items-center gap-4 rounded-xl border border-border/60 bg-muted/20 py-6">
-                  <div className="font-mono-nums text-4xl font-semibold text-emerald-600 dark:text-emerald-400">
+                  <MetricEmeraldBlock
+                    label="Cronômetro"
+                    align="center"
+                    valueClassName="font-mono-nums text-4xl font-semibold text-emerald-600 dark:text-emerald-400"
+                    className="w-full max-w-xs"
+                  >
                     {pad(hours)}:{pad(minutes)}:{pad(seconds)}
-                  </div>
+                  </MetricEmeraldBlock>
                   <Button
                     onClick={() => setIsRunning(!isRunning)}
                     size="sm"
@@ -490,9 +499,7 @@ export function SessionDrawer({
                 <Button
                   variant="outline"
                   className="h-11 w-full rounded-lg border-emerald-500/45 text-emerald-800 hover:bg-emerald-500/10 dark:text-emerald-300"
-                  disabled={
-                    elapsed === 0 || saveSession.isPending || !cycleId
-                  }
+                  disabled={elapsed === 0 || saveSession.isPending || !cycleId}
                   onClick={() => saveSession.mutate()}
                 >
                   {saveSession.isPending ? "Salvando…" : "Salvar sessão"}
@@ -502,11 +509,6 @@ export function SessionDrawer({
 
             {activeTab === "historico" && (
               <div className="space-y-3">
-                <p className="text-[11px] text-muted-foreground">
-                  {cycleId && cycleName
-                    ? `Sessões do ciclo selecionado, da mais recente para a mais antiga.`
-                    : "Selecione um ciclo acima."}
-                </p>
                 {!cycleId ? (
                   <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
                     Escolha um ciclo na faixa superior para ver o histórico.
@@ -525,25 +527,23 @@ export function SessionDrawer({
                         <p className="text-xs font-medium text-foreground">
                           {formatSessionWhen(s.created_at)}
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          <span>
-                            <span className="text-muted-foreground">
-                              Gameplay:{" "}
-                            </span>
-                            <span className="tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
-                              {formatDuration(s.duration_seconds ?? 0)}
-                            </span>
-                          </span>
-                          <span>
-                            <span className="text-muted-foreground">
-                              Nota:{" "}
-                            </span>
-                            <span className="tabular-nums font-semibold">
-                              {typeof s.score === "number"
-                                ? s.score.toFixed(1)
-                                : "—"}
-                            </span>
-                          </span>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <MetricEmeraldBlock
+                            label="Gameplay"
+                            valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
+                            className="min-w-0 flex-1 sm:max-w-[9rem]"
+                          >
+                            {formatDuration(s.duration_seconds ?? 0)}
+                          </MetricEmeraldBlock>
+                          <MetricEmeraldBlock
+                            label="Nota"
+                            valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                            className="min-w-0 flex-1 sm:max-w-[6rem]"
+                          >
+                            {typeof s.score === "number"
+                              ? s.score.toFixed(1)
+                              : "—"}
+                          </MetricEmeraldBlock>
                         </div>
                         {(s.note ?? "").trim() !== "" && (
                           <p className="mt-2 text-sm text-muted-foreground">
@@ -555,7 +555,7 @@ export function SessionDrawer({
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-md text-xs"
+                            className="h-8 rounded-md border-emerald-500/40 text-xs text-emerald-800 hover:bg-emerald-500/10 dark:text-emerald-300"
                             onClick={() => openEdit(s)}
                           >
                             <Pencil className="mr-1.5 h-3 w-3" />
@@ -667,7 +667,9 @@ export function SessionDrawer({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteSession.isPending}

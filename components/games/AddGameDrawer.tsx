@@ -225,7 +225,7 @@ export function AddGameDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
-        <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
+        <SheetHeader className="space-y-0 px-6 pb-4 pt-6 text-left">
           <SheetTitle className="sr-only">
             {isEdit ? "Editar jogo" : "Adicionar jogo"}
           </SheetTitle>

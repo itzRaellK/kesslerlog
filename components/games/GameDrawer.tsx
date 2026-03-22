@@ -470,7 +470,7 @@ export function GameDrawer({
                         </div>
                         <div className="rounded-md bg-muted/60 px-2 py-1.5">
                           <span className="text-muted-foreground block">Média</span>
-                          <span className="font-semibold tabular-nums text-primary">
+                          <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
                             {(cycle.avg_session_score ?? 0) > 0
                               ? cycle.avg_session_score.toFixed(1)
                               : "—"}
@@ -702,11 +702,16 @@ export function GameDrawer({
                             <span className="tabular-nums text-muted-foreground">
                               {formatDuration(session.duration_seconds)}
                             </span>
-                            <span className="font-semibold tabular-nums text-primary">
+                            <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
                               {session.score.toFixed(1)}
                             </span>
                             <p
-                              className="col-span-3 min-h-[1.25rem] break-words text-xs text-muted-foreground leading-relaxed line-clamp-4"
+                              className={cn(
+                                "col-span-3 min-h-[1.25rem] break-words text-xs leading-relaxed line-clamp-4",
+                                session.note
+                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  : "text-muted-foreground",
+                              )}
                               title={session.note || undefined}
                             >
                               {session.note || "—"}
@@ -722,12 +727,19 @@ export function GameDrawer({
                               <Badge variant="secondary" className="text-[10px] rounded-md">
                                 {cycle.review.badge_name}
                               </Badge>
-                              <span className="text-sm font-semibold tabular-nums text-primary">
+                              <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
                                 {cycle.review.score.toFixed(1)}
                               </span>
                             </div>
                           </div>
-                          <p className="break-words text-sm text-foreground/90 leading-relaxed line-clamp-4">
+                          <p
+                            className={cn(
+                              "break-words text-sm leading-relaxed line-clamp-4",
+                              cycle.review.text?.trim()
+                                ? "text-emerald-800 dark:text-emerald-300"
+                                : "text-muted-foreground",
+                            )}
+                          >
                             {cycle.review.text || "—"}
                           </p>
                         </div>

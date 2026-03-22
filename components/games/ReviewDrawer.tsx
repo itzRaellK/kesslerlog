@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { formatDuration } from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
+import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
 
 interface ReviewDrawerProps {
@@ -445,7 +446,7 @@ export function ReviewDrawer({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className={DRAWER_SHEET_CONTENT_CLASS}>
-          <SheetHeader className="space-y-0 border-b border-border px-6 pb-4 pt-6 text-left">
+          <SheetHeader className="space-y-0 px-6 pb-4 pt-6 text-left">
             <SheetTitle className="sr-only">Review</SheetTitle>
             <DrawerGameHeader label="Review" gameName={gameName} />
           </SheetHeader>
@@ -458,10 +459,6 @@ export function ReviewDrawer({
             >
               Ciclo da review
             </Label>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Selecione o ciclo que você deseja fazer a review.
-            </p>
-
             {cyclesLoading ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 Carregando ciclos…
@@ -475,7 +472,7 @@ export function ReviewDrawer({
                 <Select value={selectedCycle} onValueChange={setSelectedCycle}>
                   <SelectTrigger
                     id="review-cycle-select"
-                    className="mt-3 h-auto min-h-10 w-full rounded-lg border-emerald-500/30 bg-background py-2 text-left [&>span]:line-clamp-none"
+                    className="mt-2 h-auto min-h-10 w-full rounded-lg border-emerald-500/30 bg-background py-2 text-left [&>span]:line-clamp-none"
                   >
                     <SelectValue placeholder="Selecione um ciclo">
                       {cycleNameDisplay ? (
@@ -628,36 +625,27 @@ export function ReviewDrawer({
                         </div>
 
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                              Sessões
-                            </p>
-                            <p className="mt-0.5 text-sm font-semibold tabular-nums">
-                              {selectedCycleMeta.sessions_count ?? 0}
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                              Tempo total
-                            </p>
-                            <p className="mt-0.5 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                              {formatDuration(
-                                selectedCycleMeta.total_duration_seconds ?? 0,
-                              )}
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                              Média das sessões
-                            </p>
-                            <p className="mt-0.5 text-sm font-semibold tabular-nums">
-                              {Number(selectedCycleMeta.avg_session_score) > 0
-                                ? Number(
-                                    selectedCycleMeta.avg_session_score,
-                                  ).toFixed(1)
-                                : "—"}
-                            </p>
-                          </div>
+                          <MetricEmeraldBlock label="Sessões">
+                            {selectedCycleMeta.sessions_count ?? 0}
+                          </MetricEmeraldBlock>
+                          <MetricEmeraldBlock
+                            label="Tempo total"
+                            valueClassName="font-mono-nums text-emerald-700 dark:text-emerald-400"
+                          >
+                            {formatDuration(
+                              selectedCycleMeta.total_duration_seconds ?? 0,
+                            )}
+                          </MetricEmeraldBlock>
+                          <MetricEmeraldBlock
+                            label="Média das sessões"
+                            valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
+                          >
+                            {Number(selectedCycleMeta.avg_session_score) > 0
+                              ? Number(
+                                  selectedCycleMeta.avg_session_score,
+                                ).toFixed(1)
+                              : "—"}
+                          </MetricEmeraldBlock>
                         </div>
                       </div>
                     ) : null}
@@ -696,9 +684,11 @@ export function ReviewDrawer({
                                         selectedHistoryReview.created_at,
                                       )}{" "}
                                       · nota{" "}
-                                      {Number(
-                                        selectedHistoryReview.score,
-                                      ).toFixed(1)}
+                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                        {Number(
+                                          selectedHistoryReview.score,
+                                        ).toFixed(1)}
+                                      </span>
                                     </span>
                                   ) : null}
                                 </SelectValue>
@@ -718,8 +708,11 @@ export function ReviewDrawer({
                                         {formatReviewWhen(r.created_at)}
                                       </span>
                                       <span className="text-[11px] text-muted-foreground">
-                                        nota {Number(r.score).toFixed(1)} ·{" "}
-                                        {r.review_badge_types?.name ?? "—"}
+                                        nota{" "}
+                                        <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                          {Number(r.score).toFixed(1)}
+                                        </span>{" "}
+                                        · {r.review_badge_types?.name ?? "—"}
                                       </span>
                                     </span>
                                   </SelectItem>
@@ -749,17 +742,14 @@ export function ReviewDrawer({
                                 )}
                               </p>
                             </div>
-                            <div className="flex flex-wrap gap-3">
-                              <div>
-                                <p className="text-[10px] uppercase text-muted-foreground">
-                                  Nota
-                                </p>
-                                <p className="text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                                  {Number(selectedHistoryReview.score).toFixed(
-                                    1,
-                                  )}
-                                </p>
-                              </div>
+                            <div className="flex flex-wrap items-end gap-3">
+                              <MetricEmeraldBlock
+                                label="Nota"
+                                valueClassName="text-lg font-semibold text-emerald-700 dark:text-emerald-400"
+                                className="min-w-[5rem]"
+                              >
+                                {Number(selectedHistoryReview.score).toFixed(1)}
+                              </MetricEmeraldBlock>
                               <div>
                                 <p className="text-[10px] uppercase text-muted-foreground">
                                   Badge
@@ -779,7 +769,7 @@ export function ReviewDrawer({
                                 <p className="text-[10px] font-medium uppercase text-muted-foreground">
                                   Resumo
                                 </p>
-                                <p className="mt-1 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-emerald-800 dark:text-emerald-300">
                                   {selectedHistoryReview.text}
                                 </p>
                               </div>
@@ -790,7 +780,7 @@ export function ReviewDrawer({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="rounded-lg"
+                                className="rounded-lg border-emerald-500/40 text-emerald-800 hover:bg-emerald-500/10 dark:text-emerald-300"
                                 onClick={() =>
                                   openEditReview(selectedHistoryReview)
                                 }

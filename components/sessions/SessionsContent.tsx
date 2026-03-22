@@ -14,11 +14,7 @@ import { RefreshCw, Play, MessageSquare, ChevronRight } from "lucide-react";
 import { CycleDrawer } from "@/components/games/CycleDrawer";
 import { SessionDrawer } from "@/components/games/SessionDrawer";
 import { ReviewDrawer } from "@/components/games/ReviewDrawer";
-import {
-  toastSuccess,
-  toastError,
-  getErrorMessage,
-} from "@/lib/toast";
+import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
 
 function formatHMFromSeconds(totalSeconds: number) {
   const sec = totalSeconds ?? 0;
@@ -799,8 +795,7 @@ export function SessionsContent() {
                         {status}
                       </span>
                       <span className="text-[10px] text-muted-foreground tabular-nums sm:text-xs">
-                        {nSessions}{" "}
-                        {nSessions === 1 ? "sessão" : "sessões"}
+                        {nSessions} {nSessions === 1 ? "sessão" : "sessões"}
                       </span>
                     </div>
                   </summary>
@@ -808,13 +803,12 @@ export function SessionsContent() {
                   <div className="border-t border-border/50 px-4 pb-4 pt-2">
                     <ul className="divide-y divide-border/40">
                       {entry.sessions.map((s) => {
-                        const timePart = new Date(s.created_at).toLocaleTimeString(
-                          "pt-BR",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        );
+                        const timePart = new Date(
+                          s.created_at,
+                        ).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
                         const dur = formatHMFromSeconds(
                           s.duration_seconds ?? 0,
                         );
@@ -825,7 +819,10 @@ export function SessionsContent() {
                         const longDate = formatLongDatePtBR(s.created_at);
 
                         return (
-                          <li key={s.id} className="list-none py-3.5 first:pt-2">
+                          <li
+                            key={s.id}
+                            className="list-none py-3.5 first:pt-2"
+                          >
                             {/* Data por extenso (dia, mês, ano) – horário | chips duração + média */}
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="min-w-0 text-sm leading-snug">
@@ -857,12 +854,15 @@ export function SessionsContent() {
                             </div>
 
                             <p
-                              className="mt-2 text-sm leading-relaxed text-muted-foreground break-words"
+                              className={cn(
+                                "mt-2 break-words text-sm leading-relaxed",
+                                (s.note ?? "").trim() !== ""
+                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  : "text-muted-foreground",
+                              )}
                               title={s.note?.trim() ? s.note : undefined}
                             >
-                              {(s.note ?? "").trim() !== ""
-                                ? s.note
-                                : "—"}
+                              {(s.note ?? "").trim() !== "" ? s.note : "—"}
                             </p>
                           </li>
                         );

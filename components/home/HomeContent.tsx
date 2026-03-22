@@ -263,8 +263,7 @@ export function HomeContent() {
                   { label: "Total", value: String(totalCycles) },
                   {
                     label: "Média reviews",
-                    value:
-                      reviewsCount > 0 ? avgReviewScore.toFixed(1) : "—",
+                    value: reviewsCount > 0 ? avgReviewScore.toFixed(1) : "—",
                   },
                 ]
           }
@@ -282,10 +281,7 @@ export function HomeContent() {
                   { label: "Total", value: String(totalSessions) },
                   {
                     label: "Média (sessão)",
-                    value:
-                      totalSessions > 0
-                        ? avgSessionScore.toFixed(1)
-                        : "—",
+                    value: totalSessions > 0 ? avgSessionScore.toFixed(1) : "—",
                   },
                 ]
           }
@@ -303,8 +299,7 @@ export function HomeContent() {
                   { label: "Total", value: totalSessionTimeFormatted },
                   {
                     label: "Média duração",
-                    value:
-                      totalSessions > 0 ? avgSessionTimeFormatted : "—",
+                    value: totalSessions > 0 ? avgSessionTimeFormatted : "—",
                   },
                 ]
           }
@@ -367,7 +362,7 @@ export function HomeContent() {
                         {formatDuration(cycle.total_duration_seconds ?? 0)}
                       </span>
                       {(cycle.avg_session_score ?? 0) > 0 && (
-                        <span className="tabular-nums">
+                        <span className="tabular-nums font-medium text-emerald-700 dark:text-emerald-400">
                           ⌀ {cycle.avg_session_score}
                         </span>
                       )}

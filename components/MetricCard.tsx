@@ -66,7 +66,7 @@ export function MetricCard({
             "mt-1 text-xs",
             changeType === "positive" && "text-positive",
             changeType === "negative" && "text-negative",
-            changeType === "neutral" && "text-muted-foreground"
+            changeType === "neutral" && "text-muted-foreground",
           )}
         >
           {change}
