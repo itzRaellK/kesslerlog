@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { rawgMetacriticToAppScore } from "./metacritic-scale";
 import type { RawgGameDetail } from "./types";
 import { stripHtml } from "./strip-html";
 
@@ -86,7 +87,10 @@ export async function importRawgGameToSupabase(
       released: detail.released || null,
       website: detail.website?.trim() || null,
       esrb_rating: detail.esrb_rating?.name ?? null,
-      metacritic: detail.metacritic ?? null,
+      metacritic:
+        detail.metacritic != null
+          ? rawgMetacriticToAppScore(detail.metacritic)
+          : null,
       rawg_rating: detail.rating ?? null,
       playtime_hours:
         detail.playtime != null ? Math.round(detail.playtime) : null,
@@ -190,7 +194,10 @@ export async function importRawgGameToSupabase(
     (s) => s.source.trim().toLowerCase() === "metacritic",
   );
   if (!hasMeta && detail.metacritic != null) {
-    scores.push({ source: "Metacritic", score: detail.metacritic });
+    scores.push({
+      source: "Metacritic",
+      score: rawgMetacriticToAppScore(detail.metacritic),
+    });
   }
 
   const scoreRows = scores

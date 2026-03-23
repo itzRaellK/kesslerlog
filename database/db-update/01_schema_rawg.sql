@@ -13,7 +13,7 @@ alter table public.games add column if not exists description text;
 alter table public.games add column if not exists released date;
 alter table public.games add column if not exists website text;
 alter table public.games add column if not exists esrb_rating text;
-alter table public.games add column if not exists metacritic smallint;
+alter table public.games add column if not exists metacritic numeric(4, 1);
 alter table public.games add column if not exists rawg_rating numeric(5, 2);
 alter table public.games add column if not exists playtime_hours integer;
 alter table public.games add column if not exists background_image_url text;
@@ -35,7 +35,7 @@ begin
     where n.nspname = 'public' and t.relname = 'games' and c.conname = 'games_metacritic_range'
   ) then
     alter table public.games add constraint games_metacritic_range
-      check (metacritic is null or (metacritic between 0 and 100));
+      check (metacritic is null or (metacritic >= 0 and metacritic <= 10));
   end if;
 end $$;
 

@@ -20,6 +20,7 @@ import { GenreMultiSelectInput } from "@/components/games/GenreMultiSelectInput"
 import type { GenreRow } from "@/lib/game-genres";
 import { syncGameGenresForGame } from "@/lib/game-genres";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { rawgMetacriticToAppScore } from "@/lib/rawg/metacritic-scale";
 import { stripHtml } from "@/lib/rawg/strip-html";
 import { importRawgGameToSupabase } from "@/lib/rawg/import-from-rawg";
 import type { RawgGameDetail, RawgSearchResult } from "@/lib/rawg/types";
@@ -220,7 +221,10 @@ export function AddGameDrawer({
       setDescription(stripHtml(d.description_raw ?? ""));
       if (d.metacritic != null) {
         setExternalScores([
-          { source: "Metacritic", score: String(d.metacritic) },
+          {
+            source: "Metacritic",
+            score: String(rawgMetacriticToAppScore(d.metacritic)),
+          },
         ]);
       } else {
         setExternalScores([]);
