@@ -185,7 +185,7 @@ export function GamesContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">Biblioteca de jogos</h1>
+        <h1 className="text-lg font-semibold text-foreground">Biblioteca de jogos</h1>
         <p className="text-sm text-muted-foreground">
           Gerencie sua biblioteca de jogos.
         </p>
@@ -314,6 +314,8 @@ export function GamesContent() {
                 genre_name: string;
                 genre_type_id: string | null;
                 created_at: string;
+                description?: string | null;
+                background_image_url?: string | null;
               }) => {
                 const externalScores = externalScoresMap?.[game.id] ?? [];
                 return (
@@ -332,7 +334,7 @@ export function GamesContent() {
                             />
                           ) : null}
                         </div>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium text-app-title">
                           {game.title}
                         </span>
                       </div>
@@ -401,6 +403,9 @@ export function GamesContent() {
                               title: game.title,
                               image_url: game.image_url,
                               genre_type_id: game.genre_type_id ?? null,
+                              description: game.description ?? null,
+                              background_image_url:
+                                game.background_image_url ?? null,
                               externalScores: externalScores.map((es) => ({
                                 source: es.source,
                                 score: String(es.score),

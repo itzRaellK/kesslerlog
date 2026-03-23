@@ -641,7 +641,7 @@ export function StatsContent() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold">Stats</h1>
+        <h1 className="text-lg font-semibold text-foreground">Stats</h1>
         <p className="text-sm text-muted-foreground">
           Análise detalhada do seu gameplay.
         </p>

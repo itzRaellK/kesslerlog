@@ -76,12 +76,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-emerald-500/15 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-4 px-4 sm:px-8">
           <Link
             href="/"
-            className="group flex shrink-0 items-center gap-2 rounded-lg border border-transparent px-1 py-1 font-semibold tracking-tight transition-colors hover:border-emerald-500/25 hover:bg-emerald-500/5"
+            className="group flex shrink-0 items-center gap-2 rounded-lg border border-transparent px-1 py-1 font-semibold tracking-tight text-foreground transition-colors hover:border-emerald-500/25 hover:bg-emerald-500/5"
           >
             <Gamepad2 className="h-5 w-5 text-emerald-600 transition-colors group-hover:text-emerald-500 dark:text-emerald-400" />
             <span className="hidden text-sm sm:inline">KesslerLog</span>

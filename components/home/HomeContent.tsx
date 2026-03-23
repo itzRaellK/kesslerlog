@@ -193,7 +193,7 @@ export function HomeContent() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold">Dashboard</h1>
+          <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Seu histórico de jogos, quantificado.
           </p>
@@ -340,7 +340,7 @@ export function HomeContent() {
                         ) : null}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
+                        <p className="truncate text-sm font-medium text-app-title">
                           {game?.title}
                         </p>
                         <p className="text-xs text-muted-foreground">

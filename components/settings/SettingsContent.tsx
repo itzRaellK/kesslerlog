@@ -464,7 +464,7 @@ export function SettingsContent() {
             <Settings2 className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">
               Configurações
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -500,7 +500,7 @@ export function SettingsContent() {
             )}
           >
             <div>
-              <h2 className="text-sm font-semibold">Gêneros</h2>
+              <h2 className="text-sm font-semibold text-foreground">Gêneros</h2>
               <p className="text-xs text-muted-foreground">
                 Categorias ao cadastrar jogos.
               </p>
@@ -596,7 +596,7 @@ export function SettingsContent() {
             )}
           >
             <div>
-              <h2 className="text-sm font-semibold">Status (ciclo)</h2>
+              <h2 className="text-sm font-semibold text-foreground">Status (ciclo)</h2>
               <p className="text-xs text-muted-foreground">
                 Jogando, finalizado, fila, etc.
               </p>
@@ -710,7 +710,7 @@ export function SettingsContent() {
             )}
           >
             <div>
-              <h2 className="text-sm font-semibold">Status do jogo</h2>
+              <h2 className="text-sm font-semibold text-foreground">Status do jogo</h2>
               <p className="text-xs text-muted-foreground">
                 Não iniciado, jogando, concluído…
               </p>
@@ -813,7 +813,7 @@ export function SettingsContent() {
             )}
           >
             <div>
-              <h2 className="text-sm font-semibold">Badges de review</h2>
+              <h2 className="text-sm font-semibold text-foreground">Badges de review</h2>
               <p className="text-xs text-muted-foreground">
                 Rótulos da avaliação final.
               </p>

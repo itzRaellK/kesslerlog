@@ -549,7 +549,7 @@ export function SessionsContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">Sessões e Reviews</h1>
+        <h1 className="text-lg font-semibold text-foreground">Sessões e Reviews</h1>
         <p className="text-sm text-muted-foreground">
           Fila, sessões, reviews e histórico filtrável.
         </p>
@@ -602,7 +602,7 @@ export function SessionsContent() {
                       </div>
 
                       <div className="space-y-1 min-w-0">
-                        <p className="text-base font-semibold leading-tight line-clamp-2">
+                        <p className="text-base font-semibold leading-tight line-clamp-2 text-app-title">
                           {item.game_title}
                         </p>
                         <div className="flex items-center gap-2">
