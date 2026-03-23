@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { splitGenreNamesLabel } from "@/lib/game-genres";
 
 export function GamesContent() {
   const [search, setSearch] = useState("");
@@ -166,15 +167,21 @@ export function GamesContent() {
       title?: string;
       genre_type_id: string | null;
       genre_name?: string | null;
+      genre_names?: string | null;
+      genre_type_ids?: string[] | null;
     }) => {
       const title = g.title ?? "";
       const matchesSearch = title.toLowerCase().includes(search.toLowerCase());
 
-      const gn = (g.genre_name ?? "").toLowerCase();
+      const gn = (g.genre_names ?? g.genre_name ?? "").toLowerCase();
       const genreQ = genreInput.trim().toLowerCase();
       let matchesGenre = true;
       if (genreFilterId) {
-        matchesGenre = g.genre_type_id === genreFilterId;
+        const ids = g.genre_type_ids;
+        matchesGenre = Boolean(
+          (Array.isArray(ids) && ids.includes(genreFilterId)) ||
+            g.genre_type_id === genreFilterId,
+        );
       } else if (genreQ) {
         matchesGenre = gn.includes(genreQ);
       }
@@ -312,7 +319,9 @@ export function GamesContent() {
                 title: string;
                 image_url: string | null;
                 genre_name: string;
+                genre_names?: string | null;
                 genre_type_id: string | null;
+                genre_type_ids?: string[] | null;
                 created_at: string;
                 description?: string | null;
                 background_image_url?: string | null;
@@ -340,9 +349,19 @@ export function GamesContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center align-middle">
-                      <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
-                        {game.genre_name}
-                      </span>
+                      <div className="flex flex-wrap items-center justify-center gap-1">
+                        {splitGenreNamesLabel(
+                          game.genre_names,
+                          game.genre_name,
+                        ).map((name) => (
+                          <span
+                            key={name}
+                            className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center align-middle">
                       <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -403,6 +422,7 @@ export function GamesContent() {
                               title: game.title,
                               image_url: game.image_url,
                               genre_type_id: game.genre_type_id ?? null,
+                              genre_type_ids: game.genre_type_ids ?? null,
                               description: game.description ?? null,
                               background_image_url:
                                 game.background_image_url ?? null,

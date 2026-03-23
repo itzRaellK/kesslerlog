@@ -60,6 +60,7 @@ create unique index if not exists genre_types_rawg_id_unique
 create table if not exists public.game_genres (
   game_id uuid not null references public.games(id) on delete cascade,
   genre_type_id uuid not null references public.genre_types(id) on delete cascade,
+  sort_order smallint not null default 0,
   created_at timestamptz not null default now(),
   primary key (game_id, genre_type_id)
 );

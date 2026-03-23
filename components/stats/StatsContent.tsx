@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { HistoryDrawer } from "@/components/games/HistoryDrawer";
 import { Gamepad2, Activity, Star, Clock } from "lucide-react";
+import { splitGenreNamesLabel } from "@/lib/game-genres";
 
 /** Barras: verde esmeralda padrão (alinhado ao tema). */
 const BAR_FILL = "hsl(142 71% 45%)";
@@ -153,7 +154,9 @@ type GameRow = {
   title: string;
   image_url: string | null;
   genre_name: string;
+  genre_names?: string | null;
   genre_type_id: string | null;
+  genre_type_ids?: string[] | null;
 };
 
 export function StatsContent() {
@@ -275,9 +278,13 @@ export function StatsContent() {
     (games as GameRow[]).forEach((g) => {
       const title = (g.title ?? "").toLowerCase();
       if (q && !title.includes(q)) return;
-      const gn = (g.genre_name ?? "").toLowerCase();
+      const gn = (g.genre_names ?? g.genre_name ?? "").toLowerCase();
       if (genreFilterId) {
-        if (g.genre_type_id !== genreFilterId) return;
+        const ids = g.genre_type_ids;
+        const ok =
+          (Array.isArray(ids) && ids.includes(genreFilterId)) ||
+          g.genre_type_id === genreFilterId;
+        if (!ok) return;
       } else if (genreQ && !gn.includes(genreQ)) {
         return;
       }
@@ -443,11 +450,15 @@ export function StatsContent() {
     const map = new Map<string, Record<string, number>>();
     sessionsInScope.forEach((s: { game_id: string }) => {
       const game = gamesById[s.game_id];
-      const genre = game?.genre_name?.trim();
-      if (!genre || genre === "—") return;
-      if (!map.has(genre)) map.set(genre, {});
-      const row = map.get(genre)!;
-      row[s.game_id] = (row[s.game_id] || 0) + 1;
+      const labels = game
+        ? splitGenreNamesLabel(game.genre_names, game.genre_name)
+        : [];
+      for (const genre of labels) {
+        if (!genre || genre === "—") continue;
+        if (!map.has(genre)) map.set(genre, {});
+        const row = map.get(genre)!;
+        row[s.game_id] = (row[s.game_id] || 0) + 1;
+      }
     });
     const out: Record<string, Array<{ title: string; sessions: number }>> = {};
     map.forEach((agg, genre) => {
@@ -467,11 +478,16 @@ export function StatsContent() {
     sessionsInScope.forEach(
       (s: { game_id: string; duration_seconds?: number | null }) => {
         const game = gamesById[s.game_id];
-        const genre = game?.genre_name?.trim();
-        if (!genre || genre === "—") return;
-        if (!map.has(genre)) map.set(genre, {});
-        const row = map.get(genre)!;
-        row[s.game_id] = (row[s.game_id] || 0) + (s.duration_seconds ?? 0);
+        const labels = game
+          ? splitGenreNamesLabel(game.genre_names, game.genre_name)
+          : [];
+        for (const genre of labels) {
+          if (!genre || genre === "—") continue;
+          if (!map.has(genre)) map.set(genre, {});
+          const row = map.get(genre)!;
+          row[s.game_id] =
+            (row[s.game_id] || 0) + (s.duration_seconds ?? 0);
+        }
       },
     );
     const out: Record<string, Array<{ title: string; seconds: number }>> = {};
@@ -491,10 +507,14 @@ export function StatsContent() {
     sessionsInScope.forEach(
       (s: { game_id: string; duration_seconds?: number | null }) => {
         const game = gamesById[s.game_id];
-        const name = game?.genre_name?.trim();
-        if (name && name !== "—") {
-          genreSeconds[name] =
-            (genreSeconds[name] || 0) + (s.duration_seconds ?? 0);
+        const labels = game
+          ? splitGenreNamesLabel(game.genre_names, game.genre_name)
+          : [];
+        for (const name of labels) {
+          if (name && name !== "—") {
+            genreSeconds[name] =
+              (genreSeconds[name] || 0) + (s.duration_seconds ?? 0);
+          }
         }
       },
     );
@@ -515,8 +535,12 @@ export function StatsContent() {
     const counts: Record<string, number> = {};
     sessionsInScope.forEach((s: { game_id: string }) => {
       const game = gamesById[s.game_id];
-      const name = game?.genre_name?.trim();
-      if (name && name !== "—") counts[name] = (counts[name] || 0) + 1;
+      const labels = game
+        ? splitGenreNamesLabel(game.genre_names, game.genre_name)
+        : [];
+      for (const name of labels) {
+        if (name && name !== "—") counts[name] = (counts[name] || 0) + 1;
+      }
     });
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     return Object.entries(counts)
@@ -1199,9 +1223,19 @@ export function StatsContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center align-middle">
-                      <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
-                        {game.genre_name}
-                      </span>
+                      <div className="flex flex-wrap items-center justify-center gap-1">
+                        {splitGenreNamesLabel(
+                          game.genre_names,
+                          game.genre_name,
+                        ).map((name) => (
+                          <span
+                            key={name}
+                            className="inline-flex items-center justify-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-400"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center align-middle text-sm tabular-nums text-muted-foreground">
                       {game.sessions_count}

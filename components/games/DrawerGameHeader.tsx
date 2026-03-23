@@ -6,8 +6,12 @@ type DrawerGameHeaderProps = {
   label: string;
   /** Nome do jogo em chip esmeralda */
   gameName?: string;
-  /** Gênero (ou rótulo secundário) em chip ao lado do nome, mesmo estilo */
+  /** `subtitle`: nome abaixo do título (menos poluído em formulários longos). */
+  gameNameDisplay?: "chip" | "subtitle";
+  /** Um gênero (legado) */
   genreName?: string;
+  /** Vários gêneros (prioridade sobre `genreName`) */
+  genreNames?: string[];
   className?: string;
   children?: ReactNode;
 };
@@ -18,25 +22,54 @@ const gameChipClass =
 export function DrawerGameHeader({
   label,
   gameName,
+  gameNameDisplay = "chip",
   genreName,
+  genreNames,
   className,
   children,
 }: DrawerGameHeaderProps) {
+  const genreChips =
+    genreNames && genreNames.length > 0
+      ? genreNames
+      : genreName
+        ? [genreName]
+        : [];
+
+  const showGameAsSubtitle = gameNameDisplay === "subtitle" && !!gameName;
+
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
-          {label}
-        </h2>
-        {gameName ? (
-          <span className={cn(gameChipClass)}>
-            <span className="truncate">{gameName}</span>
-          </span>
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <h2 className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+            {label}
+          </h2>
+          {gameName && !showGameAsSubtitle ? (
+            <span className={cn(gameChipClass)}>
+              <span className="truncate">{gameName}</span>
+            </span>
+          ) : null}
+          {!showGameAsSubtitle
+            ? genreChips.map((g) => (
+                <span key={g} className={cn(gameChipClass)}>
+                  <span className="truncate">{g}</span>
+                </span>
+              ))
+            : null}
+        </div>
+        {showGameAsSubtitle ? (
+          <p className="truncate text-sm text-muted-foreground" title={gameName}>
+            {gameName}
+          </p>
         ) : null}
-        {genreName ? (
-          <span className={cn(gameChipClass)}>
-            <span className="truncate">{genreName}</span>
-          </span>
+        {showGameAsSubtitle && genreChips.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {genreChips.map((g) => (
+              <span key={g} className={cn(gameChipClass)}>
+                <span className="truncate">{g}</span>
+              </span>
+            ))}
+          </div>
         ) : null}
       </div>
       {children}

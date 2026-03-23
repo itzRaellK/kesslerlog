@@ -1,16 +1,12 @@
 -- ============================================================
--- Atualização 02 – Views (após 01_schema_rawg.sql)
--- Recria views que dependem de public.games.
+-- Patch incremental: adiciona genre_type_ids em games_with_details
+-- Use se você já rodou 02_views_rawg.sql antes desta coluna existir.
+-- Idempotente: recria só a view games_with_details.
 -- ============================================================
 
--- Necessário para `order by gg.sort_order` abaixo (idempotente; ver também 05).
 alter table public.game_genres
   add column if not exists sort_order smallint not null default 0;
 
-drop view if exists public.waitlist_with_details cascade;
-drop view if exists public.monthly_games_count_by_user cascade;
-drop view if exists public.monthly_hours_by_user cascade;
-drop view if exists public.cycles_with_details cascade;
 drop view if exists public.games_with_details cascade;
 
 create view public.games_with_details as
@@ -78,56 +74,4 @@ from public.games g
 left join public.genre_types gt on gt.id = g.genre_type_id and gt.active = true
 left join public.game_status_types gst on gst.id = g.game_status_type_id and gst.active = true;
 
-create view public.cycles_with_details as
-select
-  c.id,
-  c.game_id,
-  c.user_id,
-  c.name,
-  c.created_at,
-  c.finished_at,
-  st.id as status_type_id,
-  st.name as status_name,
-  (select count(*) from public.sessions s where s.cycle_id = c.id) as sessions_count,
-  (select coalesce(sum(s.duration_seconds), 0) from public.sessions s where s.cycle_id = c.id) as total_duration_seconds,
-  (select coalesce(avg(s.score), 0) from public.sessions s where s.cycle_id = c.id) as avg_session_score
-from public.cycles c
-join public.status_types st on st.id = c.status_type_id
-where st.active = true;
-
-create view public.monthly_hours_by_user as
-select
-  s.user_id,
-  to_char(s.created_at, 'YYYY-MM') as month_key,
-  sum(s.duration_seconds) as total_seconds
-from public.sessions s
-group by s.user_id, to_char(s.created_at, 'YYYY-MM')
-order by month_key;
-
-create view public.monthly_games_count_by_user as
-select
-  s.user_id,
-  to_char(s.created_at, 'YYYY-MM') as month_key,
-  count(distinct s.game_id) as games_count
-from public.sessions s
-group by s.user_id, to_char(s.created_at, 'YYYY-MM')
-order by month_key;
-
-create view public.waitlist_with_details as
-select
-  w.id,
-  w.user_id,
-  w.game_id,
-  w.position,
-  w.added_at,
-  g.title as game_title,
-  g.image_url as game_image_url,
-  g.background_image_url as game_background_image_url
-from public.waitlist w
-join public.games g on g.id = w.game_id;
-
 grant select on public.games_with_details to authenticated;
-grant select on public.cycles_with_details to authenticated;
-grant select on public.monthly_hours_by_user to authenticated;
-grant select on public.monthly_games_count_by_user to authenticated;
-grant select on public.waitlist_with_details to authenticated;

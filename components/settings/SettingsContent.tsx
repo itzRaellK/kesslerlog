@@ -6,6 +6,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  RefreshCw,
   Settings2,
   Trash2,
   ToggleLeft,
@@ -40,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { syncRawgGenresToSupabase } from "@/lib/rawg/sync-genres-catalog";
 import { cn } from "@/lib/utils";
 
 const Q_GENRE_S = ["genre_types_settings"] as const;
@@ -221,6 +223,17 @@ export function SettingsContent() {
       setGenreOpen(false);
       setGenreEdit(null);
       setGenreName("");
+    },
+    onError: (e) => toastError(getErrorMessage(e)),
+  });
+
+  const syncRawgGenresMut = useMutation({
+    mutationFn: () => syncRawgGenresToSupabase(supabase),
+    onSuccess: (r) => {
+      invalidateAllTypeQueries(queryClient);
+      toastSuccess(
+        `Catálogo RAWG: ${r.inserted} novo(s), ${r.linked} ligado(s) a nome já existente, ${r.skipped} já tinham id RAWG.`,
+      );
     },
     onError: (e) => toastError(getErrorMessage(e)),
   });
@@ -443,7 +456,8 @@ export function SettingsContent() {
     gameStMut.isPending ||
     badgeMut.isPending ||
     toggleMut.isPending ||
-    deleteMut.isPending;
+    deleteMut.isPending ||
+    syncRawgGenresMut.isPending;
 
   const deleteLabel =
     deleteTarget == null
@@ -502,19 +516,38 @@ export function SettingsContent() {
             <div>
               <h2 className="text-sm font-semibold text-foreground">Gêneros</h2>
               <p className="text-xs text-muted-foreground">
-                Categorias ao cadastrar jogos.
+                Categorias ao cadastrar jogos. Use Sincronizar RAWG para ligar
+                cada nome ao id oficial da API (coluna rawg_id).
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1 rounded-md border-emerald-500/30 text-xs hover:bg-emerald-500/10"
-              disabled={!canEdit || busy}
-              onClick={openNewGenre}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Novo gênero
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 gap-1 rounded-md text-xs"
+                disabled={busy}
+                onClick={() => syncRawgGenresMut.mutate()}
+                title="Busca GET /genres na RAWG e insere ou liga linhas em genre_types"
+              >
+                {syncRawgGenresMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Sincronizar RAWG
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1 rounded-md border-emerald-500/30 text-xs hover:bg-emerald-500/10"
+                disabled={!canEdit || busy}
+                onClick={openNewGenre}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Novo gênero
+              </Button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <div className={tableScrollViewport}>

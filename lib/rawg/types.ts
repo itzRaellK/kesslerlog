@@ -81,6 +81,14 @@ export type RawgGamesListResponse = {
   results: RawgSearchResult[];
 };
 
+/** GET /genres (lista paginada; o servidor agrega todas as páginas). */
+export type RawgGenresListResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: RawgGenre[];
+};
+
 /** Detalhe completo (GET /games/{id}). */
 export type RawgGameDetail = {
   id: number;

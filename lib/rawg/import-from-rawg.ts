@@ -2,26 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RawgGameDetail } from "./types";
 import { stripHtml } from "./strip-html";
 
-async function ensureGenreTypeId(
-  supabase: SupabaseClient,
-  rawgId: number,
-  name: string,
-): Promise<string> {
-  const { data: found } = await supabase
-    .from("genre_types")
-    .select("id")
-    .eq("rawg_id", rawgId)
-    .maybeSingle();
-  if (found?.id) return found.id;
-  const { data: inserted, error } = await supabase
-    .from("genre_types")
-    .insert({ name, rawg_id: rawgId, active: true })
-    .select("id")
-    .single();
-  if (error) throw error;
-  return inserted.id;
-}
-
 async function ensurePlatformTypeId(
   supabase: SupabaseClient,
   rawgId: number,
@@ -58,6 +38,11 @@ export type ImportRawgGameInput = {
   description: string;
   gameStatusTypeId: string | null;
   externalScores: { source: string; score: number }[];
+  /**
+   * IDs em `genre_types` na ordem do formulário (multiselect).
+   * Substitui `detail.genres` da API — o que o utilizador escolhe ao salvar prevalece.
+   */
+  genreTypeIds: string[];
 };
 
 export async function importRawgGameToSupabase(
@@ -70,14 +55,12 @@ export async function importRawgGameToSupabase(
     stripHtml(detail.description_raw ?? "") ||
     null;
 
+  const seen = new Set<string>();
   const genreIds: string[] = [];
-  const seenGenre = new Set<string>();
-  for (const g of detail.genres ?? []) {
-    const id = await ensureGenreTypeId(supabase, g.id, g.name);
-    if (!seenGenre.has(id)) {
-      seenGenre.add(id);
-      genreIds.push(id);
-    }
+  for (const id of input.genreTypeIds) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    genreIds.push(id);
   }
 
   const parentRawg =
@@ -111,11 +94,8 @@ export async function importRawgGameToSupabase(
         input.backgroundImageUrl?.trim() ||
         detail.background_image ||
         null,
-      image_url:
-        input.imageUrl?.trim() ||
-        detail.background_image_additional ||
-        detail.background_image ||
-        null,
+      /** Capa só com URL manual — imagens largas da RAWG não são usadas como capa. */
+      image_url: input.imageUrl?.trim() || null,
       rawg_updated_at: detail.updated ?? null,
       synced_at: new Date().toISOString(),
       developers: (detail.developers ?? []).map((d) => d.name),

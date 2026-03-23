@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
+import { splitGenreNamesLabel } from "@/lib/game-genres";
 
 const MONTH_NAMES_PT = [
   "Janeiro",
@@ -99,23 +100,20 @@ export function HistoryDrawer({
     enabled: !!gameId && open,
   });
 
-  const { data: genre } = useQuery({
-    queryKey: ["game_genre", gameId],
+  const { data: genreRow } = useQuery({
+    queryKey: ["game_genre_labels", gameId],
     queryFn: async () => {
       if (!gameId) return null;
-      const { data: g } = await supabase
-        .from("games")
-        .select("genre_type_id")
+      const { data, error } = await supabase
+        .from("games_with_details")
+        .select("genre_names, genre_name")
         .eq("id", gameId)
         .single();
-      if (!g?.genre_type_id) return null;
-      const { data, error } = await supabase
-        .from("genre_types")
-        .select("name")
-        .eq("id", g.genre_type_id)
-        .single();
       if (error) throw error;
-      return data;
+      return data as {
+        genre_names: string | null;
+        genre_name: string | null;
+      };
     },
     enabled: !!gameId && open,
   });
@@ -262,7 +260,14 @@ export function HistoryDrawer({
           <DrawerGameHeader
             label="Histórico"
             gameName={game?.title}
-            genreName={genre?.name ?? undefined}
+            genreNames={
+              genreRow
+                ? splitGenreNamesLabel(
+                    genreRow.genre_names,
+                    genreRow.genre_name,
+                  )
+                : undefined
+            }
           />
         </SheetHeader>
 

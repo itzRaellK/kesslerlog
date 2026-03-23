@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { GenreRow } from "@/lib/game-genres";
 
-export type GenreRow = { id: string; name: string };
+export type { GenreRow };
 
 /** Campo de texto com sugestões ao digitar (lista de gêneros cadastrados). */
 export function GenreAutocompleteInput({
