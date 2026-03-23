@@ -13,13 +13,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Square, RefreshCw, MessageSquare, History } from "lucide-react";
+import {
+  Plus,
+  Play,
+  Square,
+  RefreshCw,
+  MessageSquare,
+  History,
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import {
+  findCycleFinishedStatusId,
+  findGameCompletedStatusId,
+} from "@/lib/status-resolve";
 
 type TabId = "ciclo" | "sessao" | "review";
 
@@ -89,11 +100,9 @@ export function GameDrawer({
 
   const activeStatusId = statusTypes.find(
     (s: { name: string }) =>
-      s.name.toLowerCase() === "ativo" || s.name.toLowerCase() === "jogando"
+      s.name.toLowerCase() === "ativo" || s.name.toLowerCase() === "jogando",
   )?.id;
-  const finishedStatusId = statusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "finalizado"
-  )?.id;
+  const finishedStatusId = findCycleFinishedStatusId(statusTypes);
 
   const { data: gameStatusTypes = [] } = useQuery({
     queryKey: ["game_status_types"],
@@ -110,13 +119,11 @@ export function GameDrawer({
   });
 
   const gameStatusJogandoId = gameStatusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "jogando"
+    (s: { name: string }) => s.name.toLowerCase() === "jogando",
   )?.id;
-  const gameStatusConcluidoId = gameStatusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "concluído"
-  )?.id;
+  const gameStatusConcluidoId = findGameCompletedStatusId(gameStatusTypes);
   const gameStatusRejogandoId = gameStatusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "rejogando"
+    (s: { name: string }) => s.name.toLowerCase() === "rejogando",
   )?.id;
 
   const { data: gameCycles = [] } = useQuery({
@@ -216,13 +223,21 @@ export function GameDrawer({
           id: c.id,
           name: c.name,
           status_name: c.status_name,
-          sessions: (sessions ?? []).map((s: { id: string; created_at: string; duration_seconds: number; score: number; note: string | null }) => ({
-            id: s.id,
-            created_at: s.created_at,
-            duration_seconds: s.duration_seconds,
-            score: s.score,
-            note: s.note,
-          })),
+          sessions: (sessions ?? []).map(
+            (s: {
+              id: string;
+              created_at: string;
+              duration_seconds: number;
+              score: number;
+              note: string | null;
+            }) => ({
+              id: s.id,
+              created_at: s.created_at,
+              duration_seconds: s.duration_seconds,
+              score: s.score,
+              note: s.note,
+            }),
+          ),
           review: rev
             ? { score: rev.score, text: rev.text, badge_name: badgeName }
             : undefined,
@@ -236,7 +251,8 @@ export function GameDrawer({
   const createCycle = useMutation({
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user?.id || !gameId || !activeStatusId) throw new Error("Dados incompletos");
+      if (!user.user?.id || !gameId || !activeStatusId)
+        throw new Error("Dados incompletos");
       const { error } = await supabase.from("cycles").insert({
         game_id: gameId,
         user_id: user.user.id,
@@ -256,7 +272,9 @@ export function GameDrawer({
         .maybeSingle();
       const currentStatusName = gst?.name?.toLowerCase() ?? "não iniciado";
       const newGameStatusId =
-        currentStatusName === "concluído" ? gameStatusRejogandoId : gameStatusJogandoId;
+        currentStatusName === "concluído"
+          ? gameStatusRejogandoId
+          : gameStatusJogandoId;
       if (newGameStatusId) {
         await supabase
           .from("games")
@@ -276,7 +294,8 @@ export function GameDrawer({
 
   const finishCycle = useMutation({
     mutationFn: async (cycleId: string) => {
-      if (!finishedStatusId || !gameStatusConcluidoId) throw new Error("Status não encontrado");
+      if (!finishedStatusId || !gameStatusConcluidoId)
+        throw new Error("Status não encontrado");
       const { error } = await supabase
         .from("cycles")
         .update({
@@ -309,7 +328,8 @@ export function GameDrawer({
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       const cycleId = activeCycle?.id;
-      if (!user.user?.id || !cycleId || !gameId) throw new Error("Dados incompletos");
+      if (!user.user?.id || !cycleId || !gameId)
+        throw new Error("Dados incompletos");
       const scoreNum = parseFloat(sessionScore) || 0;
       const { error } = await supabase.from("sessions").insert({
         cycle_id: cycleId,
@@ -366,9 +386,17 @@ export function GameDrawer({
   const pad = (n: number) => n.toString().padStart(2, "0");
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: "ciclo", label: "Ciclo", icon: <RefreshCw className="h-3.5 w-3.5" /> },
+    {
+      id: "ciclo",
+      label: "Ciclo",
+      icon: <RefreshCw className="h-3.5 w-3.5" />,
+    },
     { id: "sessao", label: "Sessão", icon: <Play className="h-3.5 w-3.5" /> },
-    { id: "review", label: "Review", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+    {
+      id: "review",
+      label: "Review",
+      icon: <MessageSquare className="h-3.5 w-3.5" />,
+    },
   ];
 
   return (
@@ -393,7 +421,7 @@ export function GameDrawer({
                 "flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors -mb-px",
                 activeTab === tab.id
                   ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               {tab.icon}
@@ -422,75 +450,98 @@ export function GameDrawer({
                 </Button>
               </div>
               <div className="space-y-3">
-                <Label className="text-xs font-medium text-foreground">Ciclos</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Ciclos
+                </Label>
                 {gameCycles.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhum ciclo criado.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum ciclo criado.
+                  </p>
                 )}
-                {gameCycles.map((cycle: {
-                  id: string;
-                  name: string;
-                  status_name: string;
-                  sessions_count: number;
-                  total_duration_seconds: number;
-                  avg_session_score: number;
-                }) => {
-                  const totalSec = cycle.total_duration_seconds ?? 0;
-                  const h = Math.floor(totalSec / 3600);
-                  const m = Math.floor((totalSec % 3600) / 60);
-                  const timeStr = h > 0 ? `${h}h ${m}min` : `${m}min`;
-                  return (
-                    <div
-                      key={cycle.id}
-                      className="rounded-md border border-border bg-card p-4 space-y-3 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-tight">{cycle.name}</p>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "shrink-0 text-[11px] rounded-md font-medium",
-                            cycle.status_name?.toLowerCase() === "finalizado" &&
-                              "bg-green-500/10 text-green-600 dark:text-green-400",
-                            (cycle.status_name?.toLowerCase() === "ativo" ||
-                              cycle.status_name?.toLowerCase() === "jogando") &&
-                              "bg-primary/10 text-primary"
+                {gameCycles.map(
+                  (cycle: {
+                    id: string;
+                    name: string;
+                    status_name: string;
+                    sessions_count: number;
+                    total_duration_seconds: number;
+                    avg_session_score: number;
+                  }) => {
+                    const totalSec = cycle.total_duration_seconds ?? 0;
+                    const h = Math.floor(totalSec / 3600);
+                    const m = Math.floor((totalSec % 3600) / 60);
+                    const timeStr = h > 0 ? `${h}h ${m}min` : `${m}min`;
+                    return (
+                      <div
+                        key={cycle.id}
+                        className="rounded-md border border-border bg-card p-4 space-y-3 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold leading-tight">
+                            {cycle.name}
+                          </p>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "shrink-0 text-[11px] rounded-md font-medium",
+                              cycle.status_name?.toLowerCase() ===
+                                "finalizado" &&
+                                "bg-green-500/10 text-green-600 dark:text-green-400",
+                              (cycle.status_name?.toLowerCase() === "ativo" ||
+                                cycle.status_name?.toLowerCase() ===
+                                  "jogando") &&
+                                "bg-primary/10 text-primary",
+                            )}
+                          >
+                            {cycle.status_name}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="rounded-md bg-muted/60 px-2 py-1.5">
+                            <span className="text-muted-foreground block">
+                              Sessões
+                            </span>
+                            <span className="font-semibold tabular-nums">
+                              {cycle.sessions_count}
+                            </span>
+                          </div>
+                          <div className="rounded-md bg-muted/60 px-2 py-1.5">
+                            <span className="text-muted-foreground block">
+                              Tempo total
+                            </span>
+                            <span className="font-semibold tabular-nums">
+                              {timeStr}
+                            </span>
+                          </div>
+                          <div className="rounded-md bg-muted/60 px-2 py-1.5">
+                            <span className="text-muted-foreground block">
+                              Média
+                            </span>
+                            <span className="font-semibold tabular-nums text-foreground">
+                              {(cycle.avg_session_score ?? 0) > 0
+                                ? cycle.avg_session_score.toFixed(1)
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                        {cycle.status_name?.toLowerCase() !== "finalizado" &&
+                          finishedStatusId && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-full rounded-md font-medium"
+                              disabled={finishCycle.isPending}
+                              onClick={() => finishCycle.mutate(cycle.id)}
+                            >
+                              {finishCycle.isPending
+                                ? "Finalizando…"
+                                : "Finalizar ciclo"}
+                            </Button>
                           )}
-                        >
-                          {cycle.status_name}
-                        </Badge>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5">
-                          <span className="text-muted-foreground block">Sessões</span>
-                          <span className="font-semibold tabular-nums">{cycle.sessions_count}</span>
-                        </div>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5">
-                          <span className="text-muted-foreground block">Tempo total</span>
-                          <span className="font-semibold tabular-nums">{timeStr}</span>
-                        </div>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5">
-                          <span className="text-muted-foreground block">Média</span>
-                          <span className="font-semibold tabular-nums text-foreground">
-                            {(cycle.avg_session_score ?? 0) > 0
-                              ? cycle.avg_session_score.toFixed(1)
-                              : "—"}
-                          </span>
-                        </div>
-                      </div>
-                      {cycle.status_name?.toLowerCase() !== "finalizado" && finishedStatusId && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="w-full rounded-md font-medium"
-                          disabled={finishCycle.isPending}
-                          onClick={() => finishCycle.mutate(cycle.id)}
-                        >
-                          {finishCycle.isPending ? "Finalizando…" : "Finalizar ciclo"}
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  },
+                )}
               </div>
             </div>
           )}
@@ -499,13 +550,18 @@ export function GameDrawer({
             <div className="space-y-6">
               {!cycleIdForSession ? (
                 <p className="text-sm text-muted-foreground">
-                  Crie ou selecione um ciclo ativo (aba Ciclo) para registrar sessões.
+                  Crie ou selecione um ciclo ativo (aba Ciclo) para registrar
+                  sessões.
                 </p>
               ) : (
                 <>
                   <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
-                    <Label className="text-xs font-medium text-muted-foreground">Ciclo atual</Label>
-                    <p className="mt-0.5 text-sm font-semibold">{activeCycle?.name}</p>
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      Ciclo atual
+                    </Label>
+                    <p className="mt-0.5 text-sm font-semibold">
+                      {activeCycle?.name}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Cronômetro</Label>
@@ -520,15 +576,21 @@ export function GameDrawer({
                         className="w-36 rounded-md font-medium"
                       >
                         {isRunning ? (
-                          <><Square className="mr-2 h-3 w-3" /> Parar</>
+                          <>
+                            <Square className="mr-2 h-3 w-3" /> Parar
+                          </>
                         ) : (
-                          <><Play className="mr-2 h-3 w-3" /> Iniciar</>
+                          <>
+                            <Play className="mr-2 h-3 w-3" /> Iniciar
+                          </>
                         )}
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Nota da sessão</Label>
+                    <Label className="text-sm font-medium">
+                      Nota da sessão
+                    </Label>
                     <Input
                       type="number"
                       step="0.1"
@@ -541,7 +603,9 @@ export function GameDrawer({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Resumo da sessão</Label>
+                    <Label className="text-sm font-medium">
+                      Resumo da sessão
+                    </Label>
                     <Textarea
                       value={sessionNote}
                       onChange={(e) => setSessionNote(e.target.value)}
@@ -564,28 +628,32 @@ export function GameDrawer({
           {activeTab === "review" && (
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Ciclo finalizado (selecione para avaliar)</Label>
+                <Label className="text-sm font-medium">
+                  Ciclo finalizado (selecione para avaliar)
+                </Label>
                 {finishedCycles.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Nenhum ciclo finalizado. Finalize um ciclo na aba Ciclo.
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {finishedCycles.map((cycle: { id: string; name: string }) => (
-                      <button
-                        key={cycle.id}
-                        type="button"
-                        onClick={() => setReviewCycle(cycle.id)}
-                        className={cn(
-                          "w-full rounded-md border-2 px-4 py-3 text-left text-sm font-medium transition-colors",
-                          reviewCycle === cycle.id
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:bg-accent/50"
-                        )}
-                      >
-                        {cycle.name}
-                      </button>
-                    ))}
+                    {finishedCycles.map(
+                      (cycle: { id: string; name: string }) => (
+                        <button
+                          key={cycle.id}
+                          type="button"
+                          onClick={() => setReviewCycle(cycle.id)}
+                          className={cn(
+                            "w-full rounded-md border-2 px-4 py-3 text-left text-sm font-medium transition-colors",
+                            reviewCycle === cycle.id
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border hover:bg-accent/50",
+                          )}
+                        >
+                          {cycle.name}
+                        </button>
+                      ),
+                    )}
                   </div>
                 )}
               </div>
@@ -601,7 +669,7 @@ export function GameDrawer({
                         "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
                         reviewBadge === badge.id
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground"
+                          : "border-border text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {badge.name}
@@ -623,7 +691,9 @@ export function GameDrawer({
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Review (impressões finais)</Label>
+                <Label className="text-sm font-medium">
+                  Review (impressões finais)
+                </Label>
                 <Textarea
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
@@ -653,99 +723,116 @@ export function GameDrawer({
                 <Label className="text-sm font-semibold">Histórico</Label>
               </div>
               {cyclesWithSessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum ciclo ou sessão ainda.</p>
+                <p className="text-sm text-muted-foreground">
+                  Nenhum ciclo ou sessão ainda.
+                </p>
               ) : (
                 <div className="space-y-6">
-                  {cyclesWithSessions.map((cycle: {
-                    id: string;
-                    name: string;
-                    status_name: string;
-                    sessions: Array<{
+                  {cyclesWithSessions.map(
+                    (cycle: {
                       id: string;
-                      created_at: string;
-                      duration_seconds: number;
-                      score: number;
-                      note: string | null;
-                    }>;
-                    review?: { score: number; text: string | null; badge_name: string };
-                  }) => (
-                    <div key={cycle.id} className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold">{cycle.name}</p>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[10px] rounded-md font-medium",
-                            cycle.status_name?.toLowerCase() === "finalizado"
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                              : "bg-primary/10 text-primary"
-                          )}
-                        >
-                          {cycle.status_name}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {cycle.sessions.map((session: {
-                          id: string;
-                          created_at: string;
-                          duration_seconds: number;
-                          score: number;
-                          note: string | null;
-                        }) => (
-                          <div
-                            key={session.id}
-                            className="grid grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1 rounded-md border border-border bg-card px-3 py-2.5 text-sm"
+                      name: string;
+                      status_name: string;
+                      sessions: Array<{
+                        id: string;
+                        created_at: string;
+                        duration_seconds: number;
+                        score: number;
+                        note: string | null;
+                      }>;
+                      review?: {
+                        score: number;
+                        text: string | null;
+                        badge_name: string;
+                      };
+                    }) => (
+                      <div key={cycle.id} className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{cycle.name}</p>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[10px] rounded-md font-medium",
+                              cycle.status_name?.toLowerCase() === "finalizado"
+                                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                : "bg-primary/10 text-primary",
+                            )}
                           >
-                            <span className="font-medium tabular-nums text-app-title">
-                              {new Date(session.created_at).toLocaleDateString("pt-BR")}
-                            </span>
-                            <span className="tabular-nums text-app-body text-sm">
-                              {formatDuration(session.duration_seconds)}
-                            </span>
-                            <span className="font-semibold tabular-nums text-foreground">
-                              {session.score.toFixed(1)}
-                            </span>
+                            {cycle.status_name}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {cycle.sessions.map(
+                            (session: {
+                              id: string;
+                              created_at: string;
+                              duration_seconds: number;
+                              score: number;
+                              note: string | null;
+                            }) => (
+                              <div
+                                key={session.id}
+                                className="grid grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1 rounded-md border border-border bg-card px-3 py-2.5 text-sm"
+                              >
+                                <span className="font-medium tabular-nums text-app-title">
+                                  {new Date(
+                                    session.created_at,
+                                  ).toLocaleDateString("pt-BR")}
+                                </span>
+                                <span className="tabular-nums text-app-body text-sm">
+                                  {formatDuration(session.duration_seconds)}
+                                </span>
+                                <span className="font-semibold tabular-nums text-foreground">
+                                  {session.score.toFixed(1)}
+                                </span>
+                                <p
+                                  className={cn(
+                                    "col-span-3 min-h-[1.25rem] break-words text-xs leading-relaxed line-clamp-4",
+                                    session.note
+                                      ? "text-app-body"
+                                      : "text-muted-foreground",
+                                  )}
+                                  title={session.note || undefined}
+                                >
+                                  {session.note || "—"}
+                                </p>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                        {cycle.review && (
+                          <div className="rounded-md border border-border bg-muted/50 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                Review
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] rounded-md"
+                                >
+                                  {cycle.review.badge_name}
+                                </Badge>
+                                <span className="text-sm font-semibold tabular-nums text-foreground">
+                                  {cycle.review.score.toFixed(1)}
+                                </span>
+                              </div>
+                            </div>
                             <p
                               className={cn(
-                                "col-span-3 min-h-[1.25rem] break-words text-xs leading-relaxed line-clamp-4",
-                                session.note
+                                "break-words text-sm leading-relaxed line-clamp-4",
+                                cycle.review.text?.trim()
                                   ? "text-app-body"
                                   : "text-muted-foreground",
                               )}
-                              title={session.note || undefined}
                             >
-                              {session.note || "—"}
+                              {cycle.review.text || "—"}
                             </p>
                           </div>
-                        ))}
+                        )}
                       </div>
-                      {cycle.review && (
-                        <div className="rounded-md border border-border bg-muted/50 p-3 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">Review</span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Badge variant="secondary" className="text-[10px] rounded-md">
-                                {cycle.review.badge_name}
-                              </Badge>
-                              <span className="text-sm font-semibold tabular-nums text-foreground">
-                                {cycle.review.score.toFixed(1)}
-                              </span>
-                            </div>
-                          </div>
-                          <p
-                            className={cn(
-                              "break-words text-sm leading-relaxed line-clamp-4",
-                              cycle.review.text?.trim()
-                                ? "text-app-body"
-                                : "text-muted-foreground",
-                            )}
-                          >
-                            {cycle.review.text || "—"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
             </div>

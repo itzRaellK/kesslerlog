@@ -37,6 +37,10 @@ import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import {
+  findCycleFinishedStatusId,
+  findGameCompletedStatusId,
+} from "@/lib/status-resolve";
 
 interface CycleDrawerProps {
   open: boolean;
@@ -83,9 +87,7 @@ export function CycleDrawer({
     (s: { name: string }) =>
       s.name.toLowerCase() === "ativo" || s.name.toLowerCase() === "jogando",
   )?.id;
-  const finishedStatusId = statusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "finalizado",
-  )?.id;
+  const finishedStatusId = findCycleFinishedStatusId(statusTypes);
 
   const { data: gameStatusTypes = [] } = useQuery({
     queryKey: ["game_status_types"],
@@ -103,9 +105,7 @@ export function CycleDrawer({
   const gameStatusJogandoId = gameStatusTypes.find(
     (s: { name: string }) => s.name.toLowerCase() === "jogando",
   )?.id;
-  const gameStatusConcluidoId = gameStatusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "concluído",
-  )?.id;
+  const gameStatusConcluidoId = findGameCompletedStatusId(gameStatusTypes);
   const gameStatusRejogandoId = gameStatusTypes.find(
     (s: { name: string }) => s.name.toLowerCase() === "rejogando",
   )?.id;

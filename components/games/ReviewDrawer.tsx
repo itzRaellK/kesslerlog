@@ -45,6 +45,10 @@ import { formatDuration } from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import {
+  findGameStatusIdForCycleStatusLabel,
+  isFinishedCycleLabel,
+} from "@/lib/status-resolve";
 
 interface ReviewDrawerProps {
   open: boolean;
@@ -59,6 +63,7 @@ type ReviewTab = "nova" | "historico";
 type CycleForReview = {
   id: string;
   name: string;
+  status_type_id: string;
   status_name: string;
   created_at: string;
   sessions_count: number;
@@ -108,6 +113,8 @@ export function ReviewDrawer({
   const [score, setScore] = useState("");
   const [text, setText] = useState("");
   const [selectedCycle, setSelectedCycle] = useState("");
+  const [selectedCycleFinalStatusId, setSelectedCycleFinalStatusId] =
+    useState("");
 
   const [historyReviewId, setHistoryReviewId] = useState("");
   const [editingReview, setEditingReview] = useState<ReviewHistoryRow | null>(
@@ -132,7 +139,7 @@ export function ReviewDrawer({
       const { data, error } = await supabase
         .from("cycles_with_details")
         .select(
-          "id, name, status_name, created_at, sessions_count, total_duration_seconds, avg_session_score",
+          "id, name, status_type_id, status_name, created_at, sessions_count, total_duration_seconds, avg_session_score",
         )
         .eq("game_id", gameId)
         .order("created_at", { ascending: false });
@@ -147,8 +154,7 @@ export function ReviewDrawer({
     [gameCycles, selectedCycle],
   );
 
-  const isCycleFinished =
-    selectedCycleMeta?.status_name?.toLowerCase() === "finalizado";
+  const isCycleFinished = isFinishedCycleLabel(selectedCycleMeta?.status_name);
 
   const { data: statusTypes = [] } = useQuery({
     queryKey: ["status_types"],
@@ -178,19 +184,6 @@ export function ReviewDrawer({
     enabled: open,
   });
 
-  const finishedStatusId = statusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "finalizado",
-  )?.id;
-  const gameStatusConcluidoId = gameStatusTypes.find(
-    (s: { name: string }) => s.name.toLowerCase() === "concluído",
-  )?.id;
-
-  /** Ciclo aberto mas sem IDs de status no banco: não dá para finalizar nem ao salvar. */
-  const cannotAutoFinishCycle =
-    !!selectedCycleMeta &&
-    !isCycleFinished &&
-    (!finishedStatusId || !gameStatusConcluidoId);
-
   const invalidateCyclesAfterFinish = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: ["cycles_all_for_review", gameId],
@@ -217,11 +210,31 @@ export function ReviewDrawer({
     const stillValid =
       selectedCycle && gameCycles.some((c) => c.id === selectedCycle);
     if (stillValid) return;
-    const firstFinished = gameCycles.find(
-      (c) => c.status_name?.toLowerCase() === "finalizado",
+    /** Lista já vem do mais novo ao mais antigo: prioriza ciclo ainda aberto (para fechar com a review). */
+    const firstOpen = gameCycles.find(
+      (c) => !isFinishedCycleLabel(c.status_name),
     );
-    setSelectedCycle(firstFinished?.id ?? gameCycles[0].id);
+    setSelectedCycle(firstOpen?.id ?? gameCycles[0].id);
   }, [open, gameCycles, selectedCycle]);
+
+  const selectedCycleStatusTypeId = selectedCycleMeta?.status_type_id;
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedCycleFinalStatusId("");
+      return;
+    }
+    if (!selectedCycle || !statusTypes.length) return;
+    if (!selectedCycleStatusTypeId) {
+      setSelectedCycleFinalStatusId(statusTypes[0]?.id ?? "");
+      return;
+    }
+    if (!statusTypes.some((s) => s.id === selectedCycleStatusTypeId)) {
+      setSelectedCycleFinalStatusId(statusTypes[0]?.id ?? "");
+      return;
+    }
+    setSelectedCycleFinalStatusId(selectedCycleStatusTypeId);
+  }, [open, selectedCycle, selectedCycleStatusTypeId, statusTypes.length]);
 
   const { data: activeBadges = [] } = useQuery({
     queryKey: ["review_badge_types"],
@@ -297,29 +310,36 @@ export function ReviewDrawer({
   const saveReview = useMutation({
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user?.id || !gameId || !selectedCycle || !selectedBadge)
+      if (
+        !user.user?.id ||
+        !gameId ||
+        !selectedCycle ||
+        !selectedBadge ||
+        !selectedCycleFinalStatusId
+      )
         throw new Error("Dados incompletos");
       const scoreNum = parseFloat(score) || 0;
 
-      const cycleOpen =
-        selectedCycleMeta?.status_name?.toLowerCase() !== "finalizado";
-      if (cycleOpen) {
-        if (!finishedStatusId || !gameStatusConcluidoId) {
-          throw new Error(
-            "Não foi possível finalizar o ciclo automaticamente. Verifique os status no sistema ou finalize o ciclo manualmente acima.",
-          );
-        }
-        const { error: cycleErr } = await supabase
-          .from("cycles")
-          .update({
-            status_type_id: finishedStatusId,
-            finished_at: new Date().toISOString(),
-          })
-          .eq("id", selectedCycle);
-        if (cycleErr) throw cycleErr;
+      const { error: cycleErr } = await supabase
+        .from("cycles")
+        .update({
+          status_type_id: selectedCycleFinalStatusId,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", selectedCycle);
+      if (cycleErr) throw cycleErr;
+
+      const cycleStatusLabel =
+        statusTypes.find((s) => s.id === selectedCycleFinalStatusId)?.name ??
+        "";
+      const gameStatusId = findGameStatusIdForCycleStatusLabel(
+        cycleStatusLabel,
+        gameStatusTypes,
+      );
+      if (gameStatusId) {
         const { error: gameErr } = await supabase
           .from("games")
-          .update({ game_status_type_id: gameStatusConcluidoId })
+          .update({ game_status_type_id: gameStatusId })
           .eq("id", gameId);
         if (gameErr) throw gameErr;
       }
@@ -340,6 +360,7 @@ export function ReviewDrawer({
       setSelectedBadge("");
       setScore("");
       setText("");
+      setSelectedCycleFinalStatusId("");
       setSelectedCycle("");
       onReviewSaved?.({ gameId });
       onOpenChange(false);
@@ -410,6 +431,14 @@ export function ReviewDrawer({
   };
 
   const cycleNameDisplay = selectedCycleMeta?.name ?? "";
+
+  const chipEmerald = (on: boolean) =>
+    cn(
+      "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+      on
+        ? "border-emerald-500 bg-emerald-500/20 text-emerald-950 dark:text-emerald-100"
+        : "border-emerald-500/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/10",
+    );
 
   const tabNav = (
     <div className="flex shrink-0 border-b border-border">
@@ -514,12 +543,37 @@ export function ReviewDrawer({
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
             {activeTab === "nova" && (
               <div className="space-y-6">
-                {cannotAutoFinishCycle ? (
-                  <p className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-                    Não é possível finalizar o ciclo ao salvar (status
-                    incompleto no sistema). Ajuste a configuração de status.
-                  </p>
-                ) : null}
+                <section className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">
+                      Status final do ciclo
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Como o ciclo fica após publicar esta review.
+                    </p>
+                  </div>
+                  {statusTypes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum tipo de status de ciclo ativo. Cadastre em
+                      configurações.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {statusTypes.map((st: { id: string; name: string }) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setSelectedCycleFinalStatusId(st.id)}
+                          className={chipEmerald(
+                            selectedCycleFinalStatusId === st.id,
+                          )}
+                        >
+                          {st.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
 
                 <section className="space-y-3">
                   <div>
@@ -536,12 +590,7 @@ export function ReviewDrawer({
                         key={badge.id}
                         type="button"
                         onClick={() => setSelectedBadge(badge.id)}
-                        className={cn(
-                          "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                          selectedBadge === badge.id
-                            ? "border-emerald-500/55 bg-emerald-500/15 text-emerald-900 dark:text-emerald-200"
-                            : "border-border/80 text-muted-foreground hover:border-emerald-500/35 hover:bg-emerald-500/5 hover:text-foreground",
-                        )}
+                        className={chipEmerald(selectedBadge === badge.id)}
                       >
                         {badge.name}
                       </button>
@@ -582,10 +631,11 @@ export function ReviewDrawer({
                     className="h-11 w-full rounded-lg border-emerald-500/45 text-emerald-800 hover:bg-emerald-500/10 dark:text-emerald-300"
                     disabled={
                       !selectedCycle ||
+                      !selectedCycleFinalStatusId ||
                       !selectedBadge ||
                       !score ||
                       saveReview.isPending ||
-                      cannotAutoFinishCycle
+                      statusTypes.length === 0
                     }
                     onClick={() => saveReview.mutate()}
                   >
