@@ -20,7 +20,10 @@ import { GenreMultiSelectInput } from "@/components/games/GenreMultiSelectInput"
 import type { GenreRow } from "@/lib/game-genres";
 import { syncGameGenresForGame } from "@/lib/game-genres";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
-import { rawgMetacriticToAppScore } from "@/lib/rawg/metacritic-scale";
+import {
+  rawgMetacriticToAppScore,
+  RAWG_METACRITIC_SCORE_SOURCE,
+} from "@/lib/rawg/metacritic-scale";
 import { stripHtml } from "@/lib/rawg/strip-html";
 import { importRawgGameToSupabase } from "@/lib/rawg/import-from-rawg";
 import type { RawgGameDetail, RawgSearchResult } from "@/lib/rawg/types";
@@ -255,7 +258,7 @@ export function AddGameDrawer({
       if (d.metacritic != null) {
         setExternalScores([
           {
-            source: "Metacritic",
+            source: RAWG_METACRITIC_SCORE_SOURCE,
             score: String(rawgMetacriticToAppScore(d.metacritic)),
           },
         ]);
@@ -614,7 +617,7 @@ export function AddGameDrawer({
                         onChange={(e) =>
                           updateScore(i, "source", e.target.value)
                         }
-                        placeholder="Fonte (ex: Metacritic)"
+                        placeholder="Fonte (ex: Metacritic - Metascore)"
                         className="h-10 flex-1 rounded-lg border-emerald-500/20 bg-background text-sm focus-visible:ring-emerald-500/30"
                       />
                       <Input

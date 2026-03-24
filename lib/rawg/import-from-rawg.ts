@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { rawgMetacriticToAppScore } from "./metacritic-scale";
+import {
+  isMetacriticScoreSource,
+  rawgMetacriticToAppScore,
+  RAWG_METACRITIC_SCORE_SOURCE,
+} from "./metacritic-scale";
 import type { RawgGameDetail } from "./types";
 import { stripHtml } from "./strip-html";
 
@@ -190,12 +194,10 @@ export async function importRawgGameToSupabase(
   }
 
   const scores = [...input.externalScores];
-  const hasMeta = scores.some(
-    (s) => s.source.trim().toLowerCase() === "metacritic",
-  );
+  const hasMeta = scores.some((s) => isMetacriticScoreSource(s.source));
   if (!hasMeta && detail.metacritic != null) {
     scores.push({
-      source: "Metacritic",
+      source: RAWG_METACRITIC_SCORE_SOURCE,
       score: rawgMetacriticToAppScore(detail.metacritic),
     });
   }

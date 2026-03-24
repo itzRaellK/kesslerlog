@@ -180,7 +180,7 @@ export function GamesContent() {
         const ids = g.genre_type_ids;
         matchesGenre = Boolean(
           (Array.isArray(ids) && ids.includes(genreFilterId)) ||
-            g.genre_type_id === genreFilterId,
+          g.genre_type_id === genreFilterId,
         );
       } else if (genreQ) {
         matchesGenre = gn.includes(genreQ);
@@ -192,7 +192,9 @@ export function GamesContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-foreground">Biblioteca de jogos</h1>
+        <h1 className="text-lg font-semibold text-foreground">
+          Biblioteca de jogos
+        </h1>
         <p className="text-sm text-muted-foreground">
           Gerencie sua biblioteca de jogos.
         </p>
@@ -308,7 +310,6 @@ export function GamesContent() {
               <th className="px-4 py-3 text-center font-medium">
                 Notas Externas
               </th>
-              <th className="px-4 py-3 text-center font-medium">Cadastro</th>
               <th className="px-4 py-3 text-center font-medium">Ações</th>
             </tr>
           </thead>
@@ -322,7 +323,6 @@ export function GamesContent() {
                 genre_names?: string | null;
                 genre_type_id: string | null;
                 genre_type_ids?: string[] | null;
-                created_at: string;
                 description?: string | null;
                 background_image_url?: string | null;
               }) => {
@@ -382,9 +382,6 @@ export function GamesContent() {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle text-sm text-muted-foreground">
-                      {new Date(game.created_at).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-4 py-3 text-center align-middle">
                       <div className="flex items-center justify-center gap-1">
