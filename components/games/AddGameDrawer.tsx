@@ -26,6 +26,39 @@ import { importRawgGameToSupabase } from "@/lib/rawg/import-from-rawg";
 import type { RawgGameDetail, RawgSearchResult } from "@/lib/rawg/types";
 import { cn } from "@/lib/utils";
 
+function rawgSearchResultThumbUrl(r: RawgSearchResult): string | null {
+  const shot = r.short_screenshots?.[0]?.image?.trim();
+  if (shot) return shot;
+  const bg = r.background_image?.trim();
+  return bg || null;
+}
+
+function RawgSearchResultThumb({ result }: { result: RawgSearchResult }) {
+  const [broken, setBroken] = useState(false);
+  const url = rawgSearchResultThumbUrl(result);
+
+  if (!url || broken) {
+    return (
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <Gamepad2 className="h-5 w-5" aria-hidden />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border/60 bg-muted">
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setBroken(true)}
+        className="h-full w-full object-cover object-center"
+      />
+    </div>
+  );
+}
+
 export type GameToEdit = {
   id: string;
   title: string;
@@ -462,13 +495,11 @@ export function AddGameDrawer({
                             disabled={rawgDetailLoading}
                             onClick={() => void pickRawgResult(r.id)}
                             className={cn(
-                              "flex w-full items-center gap-2 px-2 py-2 text-left transition-colors hover:bg-accent",
+                              "flex w-full items-center gap-3 px-2 py-2 text-left transition-colors hover:bg-accent",
                               rawgDetailLoading && "opacity-50",
                             )}
                           >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
-                              <Gamepad2 className="h-5 w-5" aria-hidden />
-                            </div>
+                            <RawgSearchResultThumb result={r} />
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium">
                                 {r.name}

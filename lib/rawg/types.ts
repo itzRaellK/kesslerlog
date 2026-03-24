@@ -69,7 +69,10 @@ export type RawgSearchResult = {
   name: string;
   slug: string;
   released?: string | null;
+  /** Arte larga (banner); útil com `object-cover` em miniatura. */
   background_image?: string | null;
+  /** Primeira entrada costuma funcionar bem como preview na lista. */
+  short_screenshots?: RawgScreenshot[];
   rating?: number;
   metacritic?: number | null;
 };

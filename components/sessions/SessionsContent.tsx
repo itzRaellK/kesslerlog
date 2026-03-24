@@ -591,12 +591,12 @@ export function SessionsContent() {
                       onClick={() => setSelectedGameId(item.game_id)}
                       className="w-full text-left flex flex-col gap-3 flex-1"
                     >
-                      <div className="aspect-[3/4] w-full overflow-hidden rounded-md bg-muted border border-border flex items-center justify-center">
+                      <div className="aspect-[3/4] w-full overflow-hidden rounded-md bg-muted border border-border">
                         {item.game_image_url ? (
                           <img
                             src={item.game_image_url}
                             alt={item.game_title}
-                            className="h-full w-full object-contain"
+                            className="h-full w-full object-cover object-center"
                           />
                         ) : null}
                       </div>
