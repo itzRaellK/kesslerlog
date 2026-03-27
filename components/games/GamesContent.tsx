@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, ListPlus, ListX } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ListPlus,
+  ListX,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { AddGameDrawer, type GameToEdit } from "./AddGameDrawer";
@@ -22,6 +30,8 @@ import {
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
 import { splitGenreNamesLabel } from "@/lib/game-genres";
 
+const GAMES_TABLE_PAGE_SIZE = 10;
+
 export function GamesContent() {
   const [search, setSearch] = useState("");
   /** Texto do filtro de gênero; `genreFilterId` define seleção exata (lista). */
@@ -33,6 +43,7 @@ export function GamesContent() {
     id: string;
     title: string;
   } | null>(null);
+  const [gamesPage, setGamesPage] = useState(1);
 
   const supabase = createClient();
   const queryClient = useQueryClient();
@@ -189,6 +200,38 @@ export function GamesContent() {
     },
   );
 
+  const gamesTotalPages = Math.max(
+    1,
+    Math.ceil(filteredGames.length / GAMES_TABLE_PAGE_SIZE),
+  );
+
+  const paginatedGames = useMemo(() => {
+    const start = (gamesPage - 1) * GAMES_TABLE_PAGE_SIZE;
+    return filteredGames.slice(start, start + GAMES_TABLE_PAGE_SIZE);
+  }, [filteredGames, gamesPage]);
+
+  useEffect(() => {
+    setGamesPage(1);
+  }, [search, genreInput, genreFilterId]);
+
+  useEffect(() => {
+    setGamesPage((p) => Math.min(p, gamesTotalPages));
+  }, [gamesTotalPages]);
+
+  const gamesRangeLabel =
+    games.length === 0
+      ? "Nenhum jogo na biblioteca ainda."
+      : filteredGames.length === 0
+        ? "Nenhum jogo corresponde aos filtros."
+        : (() => {
+            const from = (gamesPage - 1) * GAMES_TABLE_PAGE_SIZE + 1;
+            const to = Math.min(
+              gamesPage * GAMES_TABLE_PAGE_SIZE,
+              filteredGames.length,
+            );
+            return `Mostrando ${from}–${to} de ${filteredGames.length}`;
+          })();
+
   return (
     <div className="space-y-6">
       <div>
@@ -314,7 +357,7 @@ export function GamesContent() {
             </tr>
           </thead>
           <tbody>
-            {filteredGames.map(
+            {paginatedGames.map(
               (game: {
                 id: string;
                 title: string;
@@ -452,6 +495,38 @@ export function GamesContent() {
             )}
           </tbody>
         </table>
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">{gamesRangeLabel}</p>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              disabled={gamesPage <= 1 || filteredGames.length === 0}
+              onClick={() => setGamesPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Anterior
+            </Button>
+            <span className="min-w-[7rem] text-center text-xs tabular-nums text-muted-foreground">
+              Página {gamesPage} de {gamesTotalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              disabled={gamesPage >= gamesTotalPages || filteredGames.length === 0}
+              onClick={() =>
+                setGamesPage((p) => Math.min(gamesTotalPages, p + 1))
+              }
+            >
+              Próxima
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       <AddGameDrawer
