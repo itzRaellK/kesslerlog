@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration } from "@/lib/format";
+import { formatDuration, formatNumericScore } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
@@ -390,7 +390,7 @@ export function CycleDrawer({
                               label="Nota média"
                               valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                             >
-                              {avg > 0 ? avg.toFixed(1) : "—"}
+                              {avg > 0 ? formatNumericScore(avg, 2) : "—"}
                             </MetricEmeraldBlock>
                             </div>
                           </div>

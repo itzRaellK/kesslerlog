@@ -15,6 +15,8 @@ import { CycleDrawer } from "@/components/games/CycleDrawer";
 import { SessionDrawer } from "@/components/games/SessionDrawer";
 import { ReviewDrawer } from "@/components/games/ReviewDrawer";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { formatNumericScore } from "@/lib/format";
+import { useLifetimeGameStatsMap } from "@/hooks/use-lifetime-game-stats-map";
 
 function formatHMFromSeconds(totalSeconds: number) {
   const sec = totalSeconds ?? 0;
@@ -66,6 +68,7 @@ const MONTH_LABEL_BY_KEY: Record<string, string> = {
 export function SessionsContent() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const { data: lifetimeByGame = {} } = useLifetimeGameStatsMap();
 
   const [selectedGameId, setSelectedGameId] = useState<string | undefined>();
 
@@ -573,10 +576,11 @@ export function SessionsContent() {
                 game_id: string;
                 game_title: string;
                 game_image_url: string | null;
-              }) => {
+              }              ) => {
                 const isSelected = selectedGameId === item.game_id;
                 const activeCycle = activeCycleByGame?.[item.game_id];
                 const statusName = queueGameStatusById[item.game_id] ?? "—";
+                const wl = lifetimeByGame[item.game_id];
 
                 return (
                   <div
@@ -619,6 +623,25 @@ export function SessionsContent() {
                             #{item.position}
                           </Badge>
                         </div>
+                        {(wl?.avgSessionScore ?? 0) > 0 ||
+                        (wl?.avgReviewScore ?? 0) > 0 ? (
+                          <p className="text-[10px] tabular-nums leading-snug text-muted-foreground">
+                            <span className="font-medium text-foreground/80">
+                              Histórico completo:
+                            </span>{" "}
+                            {wl && wl.avgSessionScore > 0 ? (
+                              <>⌀ sess. {wl.avgSessionScore.toFixed(2)}</>
+                            ) : null}
+                            {wl &&
+                            wl.avgSessionScore > 0 &&
+                            wl.avgReviewScore > 0 ? (
+                              <> · </>
+                            ) : null}
+                            {wl && wl.avgReviewScore > 0 ? (
+                              <>⌀ rev. {wl.avgReviewScore.toFixed(2)}</>
+                            ) : null}
+                          </p>
+                        ) : null}
                       </div>
                     </button>
 
@@ -812,10 +835,7 @@ export function SessionsContent() {
                         const dur = formatHMFromSeconds(
                           s.duration_seconds ?? 0,
                         );
-                        const scoreStr =
-                          typeof s.score === "number"
-                            ? s.score.toFixed(1)
-                            : "—";
+                        const scoreStr = formatNumericScore(s.score, 2);
                         const longDate = formatLongDatePtBR(s.created_at);
 
                         return (

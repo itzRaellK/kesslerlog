@@ -8,130 +8,38 @@ import { Label } from "@/components/ui/label";
 import { useHomeStats } from "@/hooks/use-home-stats";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration } from "@/lib/format";
 import {
-  AutocompleteFilterInput,
-  type SuggestItem,
-} from "@/components/AutocompleteFilterInput";
-
-/** Nomes completos dos meses no filtro e nas sugestões. */
-const MONTH_NAMES_PT = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-] as const;
-
-const MONTH_SHORT = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-] as const;
-
-const MONTH_LONG_PT = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-] as const;
-
-const HOME_MONTH_ROWS = Array.from({ length: 12 }, (_, i) => ({
-  value: String(i + 1),
-  label: MONTH_NAMES_PT[i],
-}));
-
-function homeMonthSuggestItems(): SuggestItem[] {
-  return HOME_MONTH_ROWS.map((m, i) => ({
-    label: m.label,
-    value: m.label,
-    searchExtra: `${m.value} ${String(m.value).padStart(2, "0")} ${MONTH_SHORT[i]} ${MONTH_LONG_PT[i]}`,
-  }));
-}
-
-function resolveMonthNumber(
-  text: string,
-  items: SuggestItem[],
-  fallback: number,
-): number {
-  const t = text.trim().toLowerCase();
-  if (!t) return fallback;
-  const exact = items.find(
-    (s) => s.label.toLowerCase() === t || s.value.toLowerCase() === t,
-  );
-  if (exact) {
-    const idx = HOME_MONTH_ROWS.findIndex((m) => m.label === exact.value);
-    return idx >= 0 ? idx + 1 : fallback;
-  }
-  const filtered = items.filter(
-    (s) =>
-      s.label.toLowerCase().includes(t) ||
-      (s.searchExtra ?? "").toLowerCase().includes(t),
-  );
-  if (filtered.length === 1) {
-    const idx = HOME_MONTH_ROWS.findIndex((m) => m.label === filtered[0].value);
-    return idx >= 0 ? idx + 1 : fallback;
-  }
-  return fallback;
-}
-
-function resolveYearNumber(text: string, fallback: number): number {
-  const t = text.trim();
-  if (!t) return fallback;
-  const n = parseInt(t, 10);
-  if (!Number.isNaN(n) && n >= 1990 && n <= 2100) return n;
-  return fallback;
-}
+  formatDuration,
+  formatNumericScore,
+  parseNumericScore,
+} from "@/lib/format";
+import { AutocompleteFilterInput } from "@/components/AutocompleteFilterInput";
+import {
+  FILTER_MONTH_ALL_LABEL,
+  homeMonthSuggestItems,
+  resolveMonthFilter,
+  resolveYearFilter,
+  yearSuggestItems,
+} from "@/lib/period-filter";
 
 const currentDate = new Date();
-const currentMonth = currentDate.getMonth() + 1;
 const currentYear = currentDate.getFullYear();
 
 export function HomeContent() {
   const [monthText, setMonthText] = useState<string>(
-    () => MONTH_NAMES_PT[currentMonth - 1],
+    () => FILTER_MONTH_ALL_LABEL,
   );
   const [yearText, setYearText] = useState(() => String(currentYear));
 
   const monthSuggestItems = useMemo(() => homeMonthSuggestItems(), []);
-  const yearSuggestItems = useMemo(() => {
-    const y = new Date().getFullYear();
-    return Array.from({ length: 25 }, (_, i) => {
-      const yr = String(y - i);
-      return { label: yr, value: yr, searchExtra: yr };
-    });
-  }, []);
+  const yearSuggestItemsList = useMemo(() => yearSuggestItems(), []);
 
-  const monthNum = useMemo(
-    () => resolveMonthNumber(monthText, monthSuggestItems, currentMonth),
+  const monthResolved = useMemo(
+    () => resolveMonthFilter(monthText, monthSuggestItems, "all"),
     [monthText, monthSuggestItems],
   );
-  const yearNum = useMemo(
-    () => resolveYearNumber(yearText, currentYear),
+  const yearResolved = useMemo(
+    () => resolveYearFilter(yearText, currentYear),
     [yearText],
   );
 
@@ -147,7 +55,7 @@ export function HomeContent() {
     totalSessionTimeFormatted,
     recentSessions,
     isLoading,
-  } = useHomeStats(monthNum, yearNum);
+  } = useHomeStats(monthResolved, yearResolved);
 
   const supabase = createClient();
   const { data: cyclesWithDetails } = useQuery({
@@ -160,6 +68,7 @@ export function HomeContent() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 
   const activeCycles =
@@ -187,13 +96,14 @@ export function HomeContent() {
         {},
       );
     },
+    staleTime: 60_000,
   });
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
+          <h1 className="text-lg font-semibold text-foreground">Home</h1>
           <p className="text-sm text-muted-foreground">
             Seu histórico de jogos, quantificado.
           </p>
@@ -214,6 +124,7 @@ export function HomeContent() {
               placeholder="Digite ou escolha o mês…"
               maxVisible={12}
               dropdownClassName="max-h-72"
+              onClear={() => setMonthText(FILTER_MONTH_ALL_LABEL)}
             />
           </div>
           <div className="space-y-1.5 min-w-[6rem]">
@@ -227,9 +138,10 @@ export function HomeContent() {
               id="home-filter-year"
               value={yearText}
               onChange={setYearText}
-              suggestions={yearSuggestItems}
+              suggestions={yearSuggestItemsList}
               placeholder="Digite ou escolha o ano…"
               maxVisible={12}
+              onClear={() => setYearText(String(currentYear))}
             />
           </div>
         </div>
@@ -263,7 +175,7 @@ export function HomeContent() {
                   { label: "Total", value: String(totalCycles) },
                   {
                     label: "Média reviews",
-                    value: reviewsCount > 0 ? avgReviewScore.toFixed(1) : "—",
+                    value: reviewsCount > 0 ? avgReviewScore.toFixed(2) : "—",
                   },
                 ]
           }
@@ -281,7 +193,10 @@ export function HomeContent() {
                   { label: "Total", value: String(totalSessions) },
                   {
                     label: "Média (sessão)",
-                    value: totalSessions > 0 ? avgSessionScore.toFixed(1) : "—",
+                    value:
+                      totalSessions > 0 && avgSessionScore > 0
+                        ? avgSessionScore.toFixed(2)
+                        : "—",
                   },
                 ]
           }
@@ -324,6 +239,8 @@ export function HomeContent() {
                 avg_session_score: number;
               }) => {
                 const game = gamesMap?.[cycle.game_id];
+                const avgSess = cycle.avg_session_score;
+                const avgSessNum = parseNumericScore(avgSess);
                 return (
                   <div
                     key={cycle.id}
@@ -361,12 +278,12 @@ export function HomeContent() {
                       <span className="tabular-nums">
                         {formatDuration(cycle.total_duration_seconds ?? 0)}
                       </span>
-                      {(cycle.avg_session_score ?? 0) > 0 && (
+                      {avgSessNum !== null && avgSessNum > 0 && (
                         <Badge
                           variant="secondary"
                           className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0 text-[10px] font-medium tabular-nums text-emerald-800 dark:text-emerald-400"
                         >
-                          ⌀ {cycle.avg_session_score}
+                          ⌀ {formatNumericScore(avgSess, 2)}
                         </Badge>
                       )}
                     </div>
@@ -429,7 +346,7 @@ export function HomeContent() {
                             variant="secondary"
                             className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-400"
                           >
-                            {session.score?.toFixed(1)}
+                            {formatNumericScore(session.score, 2)}
                           </Badge>
                           <p className="text-[11px] tabular-nums text-muted-foreground">
                             {formatDuration(session.duration_seconds ?? 0)}

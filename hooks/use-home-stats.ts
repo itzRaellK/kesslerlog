@@ -3,8 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration } from "@/lib/format";
+import type {
+  ResolvedMonthFilter,
+  ResolvedYearFilter,
+} from "@/lib/period-filter";
 
-export function useHomeStats(month?: number, year?: number) {
+export function useHomeStats(
+  month: ResolvedMonthFilter,
+  year: ResolvedYearFilter,
+) {
   const supabase = createClient();
 
   const { data: gamesWithDetails, isLoading: gamesLoading } = useQuery({
@@ -16,6 +23,7 @@ export function useHomeStats(month?: number, year?: number) {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 
   const gamesRegistered = gamesWithDetails?.length ?? 0;
@@ -27,68 +35,124 @@ export function useHomeStats(month?: number, year?: number) {
   ).length;
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["sessions", month, year],
+    queryKey: ["sessions", "home", month, year],
     queryFn: async () => {
-      let q = supabase.from("sessions").select("id, game_id, duration_seconds, note, score, created_at");
-      if (month != null && year != null) {
+      let q = supabase
+        .from("sessions")
+        .select("id, game_id, duration_seconds, note, score, created_at");
+
+      if (year !== "all" && month === "all") {
+        const start = new Date(year, 0, 1).toISOString();
+        const end = new Date(year, 11, 31, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year !== "all" && typeof month === "number") {
         const start = new Date(year, month - 1, 1).toISOString();
         const end = new Date(year, month, 0, 23, 59, 59).toISOString();
         q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year === "all" && typeof month === "number") {
+        const { data, error } = await q;
+        if (error) throw error;
+        const list = data ?? [];
+        return list.filter(
+          (s: { created_at: string }) =>
+            new Date(s.created_at).getMonth() + 1 === month,
+        );
       }
+      // year all + month all: sem filtro de data na query
+
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 30_000,
   });
 
   const { data: cyclesInPeriod, isLoading: cyclesLoading } = useQuery({
     queryKey: ["cycles_with_details", "period", month, year],
     queryFn: async () => {
       let q = supabase.from("cycles_with_details").select("id, created_at");
-      if (month != null && year != null) {
+
+      if (year !== "all" && month === "all") {
+        const start = new Date(year, 0, 1).toISOString();
+        const end = new Date(year, 11, 31, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year !== "all" && typeof month === "number") {
         const start = new Date(year, month - 1, 1).toISOString();
         const end = new Date(year, month, 0, 23, 59, 59).toISOString();
         q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year === "all" && typeof month === "number") {
+        const { data, error } = await q;
+        if (error) throw error;
+        const list = data ?? [];
+        return list.filter(
+          (c: { created_at: string }) =>
+            new Date(c.created_at).getMonth() + 1 === month,
+        );
       }
+
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 30_000,
   });
 
   const { data: reviews, isLoading: reviewsLoading } = useQuery({
-    queryKey: ["reviews", month, year],
+    queryKey: ["reviews", "home", month, year],
     queryFn: async () => {
       let q = supabase.from("reviews").select("id, score, created_at");
-      if (month != null && year != null) {
+
+      if (year !== "all" && month === "all") {
+        const start = new Date(year, 0, 1).toISOString();
+        const end = new Date(year, 11, 31, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year !== "all" && typeof month === "number") {
         const start = new Date(year, month - 1, 1).toISOString();
         const end = new Date(year, month, 0, 23, 59, 59).toISOString();
         q = q.gte("created_at", start).lte("created_at", end);
+      } else if (year === "all" && typeof month === "number") {
+        const { data, error } = await q;
+        if (error) throw error;
+        const list = data ?? [];
+        return list.filter(
+          (r: { created_at: string }) =>
+            new Date(r.created_at).getMonth() + 1 === month,
+        );
       }
+
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 30_000,
   });
 
   const totalSessions = sessions?.length ?? 0;
-  const totalPlaytime = sessions?.reduce((acc, s) => acc + (s.duration_seconds ?? 0), 0) ?? 0;
-  const avgSessionTime = totalSessions > 0 ? Math.floor(totalPlaytime / totalSessions) : 0;
+  const totalPlaytime =
+    sessions?.reduce((acc, s) => acc + (s.duration_seconds ?? 0), 0) ?? 0;
+  const avgSessionTime =
+    totalSessions > 0 ? Math.floor(totalPlaytime / totalSessions) : 0;
   const totalSessionTimeFormatted = formatDuration(totalPlaytime);
+
+  const scoredSessions =
+    sessions?.filter((s) => (s.score ?? 0) > 0) ?? [];
   const avgSessionScore =
-    sessions?.length && sessions.length > 0
+    scoredSessions.length > 0
       ? Number(
           (
-            sessions.reduce((acc, s) => acc + (s.score ?? 0), 0) / sessions.length
-          ).toFixed(1)
+            scoredSessions.reduce((acc, s) => acc + (s.score ?? 0), 0) /
+            scoredSessions.length
+          ).toFixed(2),
         )
       : 0;
+
   const avgReviewScore =
     reviews?.length && reviews.length > 0
       ? Number(
           (
-            reviews.reduce((acc, r) => acc + (r.score ?? 0), 0) / reviews.length
-          ).toFixed(1)
+            reviews.reduce((acc, r) => acc + (r.score ?? 0), 0) /
+            reviews.length
+          ).toFixed(2),
         )
       : 0;
 
@@ -109,7 +173,7 @@ export function useHomeStats(month?: number, year?: number) {
     recentSessions: sessions
       ? [...sessions].sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         ).slice(0, 5)
       : [],
     isLoading:

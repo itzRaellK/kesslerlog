@@ -41,7 +41,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
-import { formatDuration } from "@/lib/format";
+import { formatDuration, formatNumericScore, parseNumericScore } from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
@@ -305,6 +305,8 @@ export function ReviewDrawer({
     queryClient.invalidateQueries({
       queryKey: ["reviews_history_game", gameId],
     });
+    queryClient.invalidateQueries({ queryKey: ["lifetime_game_stats_map"] });
+    queryClient.invalidateQueries({ queryKey: ["reviews_stats"] });
   }, [queryClient, gameId]);
 
   const saveReview = useMutation({
@@ -693,10 +695,12 @@ export function ReviewDrawer({
                             label="Média das sessões"
                             valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                           >
-                            {Number(selectedCycleMeta.avg_session_score) > 0
-                              ? Number(
+                            {(parseNumericScore(selectedCycleMeta.avg_session_score) ??
+                              0) > 0
+                              ? formatNumericScore(
                                   selectedCycleMeta.avg_session_score,
-                                ).toFixed(1)
+                                  2,
+                                )
                               : "—"}
                           </MetricEmeraldBlock>
                         </div>
@@ -738,9 +742,10 @@ export function ReviewDrawer({
                                       )}{" "}
                                       · nota{" "}
                                       <span className="font-medium">
-                                        {Number(
+                                        {formatNumericScore(
                                           selectedHistoryReview.score,
-                                        ).toFixed(1)}
+                                          2,
+                                        )}
                                       </span>
                                     </span>
                                   ) : null}
@@ -763,7 +768,7 @@ export function ReviewDrawer({
                                       <span className="text-[11px] text-muted-foreground">
                                         nota{" "}
                                         <span className="font-medium text-foreground">
-                                          {Number(r.score).toFixed(1)}
+                                          {formatNumericScore(r.score, 2)}
                                         </span>{" "}
                                         · {r.review_badge_types?.name ?? "—"}
                                       </span>
@@ -801,7 +806,10 @@ export function ReviewDrawer({
                                 valueClassName="text-lg font-semibold text-emerald-700 dark:text-emerald-400"
                                 className="min-w-[5rem]"
                               >
-                                {Number(selectedHistoryReview.score).toFixed(1)}
+                                {formatNumericScore(
+                                  selectedHistoryReview.score,
+                                  2,
+                                )}
                               </MetricEmeraldBlock>
                               <div>
                                 <p className="text-[10px] uppercase text-muted-foreground">

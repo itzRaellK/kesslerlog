@@ -18,27 +18,17 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration } from "@/lib/format";
+import { formatDuration, formatNumericScore } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { splitGenreNamesLabel } from "@/lib/game-genres";
-
-const MONTH_NAMES_PT = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-] as const;
+import {
+  periodLabelPt,
+  type ResolvedMonthFilter,
+  type ResolvedYearFilter,
+} from "@/lib/period-filter";
 
 type SessionRow = {
   id: string;
@@ -60,9 +50,9 @@ interface HistoryDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gameId?: string;
-  /** Quando definidos (ex.: filtros da página Stats), só sessões neste mês/ano. */
-  periodMonth?: number;
-  periodYear?: number;
+  /** Filtros da página Stats (`all` = todos os meses ou todos os anos). */
+  periodMonth?: ResolvedMonthFilter;
+  periodYear?: ResolvedYearFilter;
 }
 
 export function HistoryDrawer({
@@ -75,11 +65,11 @@ export function HistoryDrawer({
   const supabase = createClient();
   const [selectedCycleId, setSelectedCycleId] = useState<string>("__all__");
 
-  const periodActive =
-    periodMonth != null &&
-    periodYear != null &&
-    periodMonth >= 1 &&
-    periodMonth <= 12;
+  const effectiveMonth: ResolvedMonthFilter = periodMonth ?? "all";
+  const effectiveYear: ResolvedYearFilter = periodYear ?? "all";
+  const periodRestricted = !(
+    effectiveMonth === "all" && effectiveYear === "all"
+  );
 
   useEffect(() => {
     if (open) setSelectedCycleId("__all__");
@@ -137,9 +127,9 @@ export function HistoryDrawer({
     queryKey: [
       "history_drawer_sessions",
       gameId,
-      periodMonth,
-      periodYear,
-      periodActive,
+      effectiveMonth,
+      effectiveYear,
+      periodRestricted,
     ],
     queryFn: async () => {
       if (!gameId) return [];
@@ -148,18 +138,33 @@ export function HistoryDrawer({
         .select("id, cycle_id, created_at, duration_seconds, score, note")
         .eq("game_id", gameId)
         .order("created_at", { ascending: false });
-      if (periodActive) {
-        const start = new Date(periodYear!, periodMonth! - 1, 1).toISOString();
-        const end = new Date(
-          periodYear!,
-          periodMonth!,
-          0,
-          23,
-          59,
-          59,
-        ).toISOString();
-        q = q.gte("created_at", start).lte("created_at", end);
+
+      const y = effectiveYear;
+      const m = effectiveMonth;
+
+      if (y === "all" && m === "all") {
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data ?? []) as SessionRow[];
       }
+
+      if (y !== "all" && m === "all") {
+        const start = new Date(y, 0, 1).toISOString();
+        const end = new Date(y, 11, 31, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      } else if (y !== "all" && typeof m === "number") {
+        const start = new Date(y, m - 1, 1).toISOString();
+        const end = new Date(y, m, 0, 23, 59, 59).toISOString();
+        q = q.gte("created_at", start).lte("created_at", end);
+      } else if (y === "all" && typeof m === "number") {
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data ?? []).filter(
+          (row: { created_at: string }) =>
+            new Date(row.created_at).getMonth() + 1 === m,
+        ) as SessionRow[];
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as SessionRow[];
@@ -247,10 +252,7 @@ export function HistoryDrawer({
     return base.filter((c) => c.id === selectedCycleId);
   }, [cyclesOrdered, sessionsByCycle, selectedCycleId, sessions.length]);
 
-  const periodLabel =
-    periodActive && periodMonth && periodYear
-      ? `${MONTH_NAMES_PT[periodMonth - 1]} de ${periodYear}`
-      : null;
+  const periodLabel = periodLabelPt(effectiveMonth, effectiveYear);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -301,7 +303,7 @@ export function HistoryDrawer({
             </SelectTrigger>
             <SelectContent className="rounded-lg">
               <SelectItem value="__all__" className="cursor-pointer">
-                {periodActive
+                {periodRestricted
                   ? "Todos os ciclos (neste período)"
                   : "Todos os ciclos"}
               </SelectItem>
@@ -327,8 +329,8 @@ export function HistoryDrawer({
             <p className="text-sm text-muted-foreground">Nenhum jogo selecionado.</p>
           ) : sessions.length === 0 ? (
             <p className="rounded-lg border border-dashed border-emerald-500/25 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-              {periodActive
-                ? "Nenhuma sessão neste jogo no mês e ano filtrados."
+              {periodRestricted
+                ? "Nenhuma sessão neste jogo no período filtrado."
                 : "Nenhuma sessão registrada para este jogo."}
             </p>
           ) : (
@@ -398,7 +400,7 @@ export function HistoryDrawer({
                           valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                           className="min-w-0 w-48 shrink-0 max-w-full"
                         >
-                          {avgScore > 0 ? avgScore.toFixed(1) : "—"}
+                          {avgScore > 0 ? formatNumericScore(avgScore, 2) : "—"}
                         </MetricEmeraldBlock>
                       </div>
                     </div>
@@ -441,7 +443,7 @@ export function HistoryDrawer({
                                   valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                                   className="min-w-0 w-full"
                                 >
-                                  {session.score?.toFixed(1) ?? "—"}
+                                  {formatNumericScore(session.score, 2)}
                                 </MetricEmeraldBlock>
                               </div>
                             </div>
@@ -482,7 +484,7 @@ export function HistoryDrawer({
                               valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                               className="min-w-[5.5rem] shrink-0"
                             >
-                              {review.score.toFixed(1)}
+                              {formatNumericScore(review.score, 2)}
                             </MetricEmeraldBlock>
                           </div>
                         </div>

@@ -40,7 +40,11 @@ import { Play, Square, Pencil, Trash2, History } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { formatDuration } from "@/lib/format";
+import {
+  formatDuration,
+  formatNumericScore,
+  parseNumericScore,
+} from "@/lib/format";
 import { DrawerGameHeader } from "@/components/games/DrawerGameHeader";
 import { MetricEmeraldBlock } from "@/components/MetricEmeraldBlock";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
@@ -224,6 +228,8 @@ export function SessionDrawer({
     queryClient.invalidateQueries({
       queryKey: ["cycles_active_for_session", gameId],
     });
+    queryClient.invalidateQueries({ queryKey: ["lifetime_game_stats_map"] });
+    queryClient.invalidateQueries({ queryKey: ["sessions_stats"] });
   }, [queryClient, cycleId, gameId]);
 
   const saveSession = useMutation({
@@ -415,12 +421,12 @@ export function SessionDrawer({
                         <span className="text-[11px] text-muted-foreground">
                           {formatCycleShortDate(c.created_at)} ·{" "}
                           {c.sessions_count ?? 0} sessões
-                          {Number(c.avg_session_score) > 0 ? (
+                          {(parseNumericScore(c.avg_session_score) ?? 0) > 0 ? (
                             <>
                               {" "}
                               · média{" "}
                               <span className="font-medium text-foreground">
-                                {Number(c.avg_session_score).toFixed(1)}
+                                {formatNumericScore(c.avg_session_score, 2)}
                               </span>
                             </>
                           ) : null}
@@ -541,9 +547,7 @@ export function SessionDrawer({
                               valueClassName="tabular-nums text-emerald-700 dark:text-emerald-400"
                               className="min-w-0 w-full"
                             >
-                              {typeof s.score === "number"
-                                ? s.score.toFixed(1)
-                                : "—"}
+                              {formatNumericScore(s.score, 2)}
                             </MetricEmeraldBlock>
                           </div>
                         </div>

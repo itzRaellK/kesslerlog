@@ -3,15 +3,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration } from "@/lib/format";
+import { formatDuration, formatNumericScore } from "@/lib/format";
 import { MetricCard } from "@/components/MetricCard";
 import { Label } from "@/components/ui/label";
 import { GameTitleAutocompleteInput } from "@/components/games/GameTitleAutocompleteInput";
 import { GenreAutocompleteInput } from "@/components/games/GenreAutocompleteInput";
-import {
-  AutocompleteFilterInput,
-  type SuggestItem,
-} from "@/components/AutocompleteFilterInput";
+import { AutocompleteFilterInput } from "@/components/AutocompleteFilterInput";
 import {
   BarChart,
   Bar,
@@ -27,6 +24,15 @@ import {
 import { HistoryDrawer } from "@/components/games/HistoryDrawer";
 import { Gamepad2, Activity, Star, Clock } from "lucide-react";
 import { splitGenreNamesLabel } from "@/lib/game-genres";
+import {
+  FILTER_MONTH_ALL_LABEL,
+  MONTH_NAMES_PT,
+  homeMonthSuggestItems,
+  recordMatchesPeriod,
+  resolveMonthFilter,
+  resolveYearFilter,
+  yearSuggestItems,
+} from "@/lib/period-filter";
 
 /** Barras: verde esmeralda padrão (alinhado ao tema). */
 const BAR_FILL = "hsl(142 71% 45%)";
@@ -43,111 +49,11 @@ function emeraldGradientColors(count: number): string[] {
   });
 }
 
-const MONTH_SHORT = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-] as const;
-
-/** Nomes completos dos meses (eixo dos gráficos e filtro de mês). */
-const MONTH_NAMES_PT = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-] as const;
-
-const MONTH_LONG_PT = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-] as const;
-
-const HOME_MONTH_ROWS = Array.from({ length: 12 }, (_, i) => ({
-  value: String(i + 1),
-  label: MONTH_NAMES_PT[i],
-}));
-
-function homeMonthSuggestItems(): SuggestItem[] {
-  return HOME_MONTH_ROWS.map((m, i) => ({
-    label: m.label,
-    value: m.label,
-    searchExtra: `${m.value} ${String(m.value).padStart(2, "0")} ${MONTH_SHORT[i]} ${MONTH_LONG_PT[i]}`,
-  }));
-}
-
-function resolveMonthNumber(
-  text: string,
-  items: SuggestItem[],
-  fallback: number,
-): number {
-  const t = text.trim().toLowerCase();
-  if (!t) return fallback;
-  const exact = items.find(
-    (s) => s.label.toLowerCase() === t || s.value.toLowerCase() === t,
-  );
-  if (exact) {
-    const idx = HOME_MONTH_ROWS.findIndex((m) => m.label === exact.value);
-    return idx >= 0 ? idx + 1 : fallback;
-  }
-  const filtered = items.filter(
-    (s) =>
-      s.label.toLowerCase().includes(t) ||
-      (s.searchExtra ?? "").toLowerCase().includes(t),
-  );
-  if (filtered.length === 1) {
-    const idx = HOME_MONTH_ROWS.findIndex((m) => m.label === filtered[0].value);
-    return idx >= 0 ? idx + 1 : fallback;
-  }
-  return fallback;
-}
-
-function resolveYearNumber(text: string, fallback: number): number {
-  const t = text.trim();
-  if (!t) return fallback;
-  const n = parseInt(t, 10);
-  if (!Number.isNaN(n) && n >= 1990 && n <= 2100) return n;
-  return fallback;
-}
-
-function inMonthYear(iso: string, month: number, year: number): boolean {
-  const d = new Date(iso);
-  return d.getFullYear() === year && d.getMonth() + 1 === month;
-}
-
-function inYear(iso: string, year: number): boolean {
+function inCalendarYear(iso: string, year: number): boolean {
   return new Date(iso).getFullYear() === year;
 }
 
-const currentDate = new Date();
-const currentMonth = currentDate.getMonth() + 1;
-const currentYear = currentDate.getFullYear();
+const currentYear = new Date().getFullYear();
 
 type GameRow = {
   id: string;
@@ -164,7 +70,7 @@ export function StatsContent() {
   const [genreInput, setGenreInput] = useState("");
   const [genreFilterId, setGenreFilterId] = useState("");
   const [monthText, setMonthText] = useState<string>(
-    () => MONTH_NAMES_PT[currentMonth - 1],
+    () => FILTER_MONTH_ALL_LABEL,
   );
   const [yearText, setYearText] = useState(() => String(currentYear));
 
@@ -176,22 +82,19 @@ export function StatsContent() {
   const supabase = createClient();
 
   const monthSuggestItems = useMemo(() => homeMonthSuggestItems(), []);
-  const yearSuggestItems = useMemo(() => {
-    const y = new Date().getFullYear();
-    return Array.from({ length: 25 }, (_, i) => {
-      const yr = String(y - i);
-      return { label: yr, value: yr, searchExtra: yr };
-    });
-  }, []);
+  const yearSuggestItemsList = useMemo(() => yearSuggestItems(), []);
 
-  const monthNum = useMemo(
-    () => resolveMonthNumber(monthText, monthSuggestItems, currentMonth),
+  const monthResolved = useMemo(
+    () => resolveMonthFilter(monthText, monthSuggestItems, "all"),
     [monthText, monthSuggestItems],
   );
-  const yearNum = useMemo(
-    () => resolveYearNumber(yearText, currentYear),
+  const yearResolved = useMemo(
+    () => resolveYearFilter(yearText, currentYear),
     [yearText],
   );
+
+  const monthlyChartYearLabel =
+    yearResolved === "all" ? "Todos os anos" : String(yearResolved);
 
   const { data: sessions = [], isPending: sessionsLoading } = useQuery({
     queryKey: ["sessions_stats"],
@@ -202,6 +105,7 @@ export function StatsContent() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 
   const { data: reviews = [], isPending: reviewsLoading } = useQuery({
@@ -213,6 +117,7 @@ export function StatsContent() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 
   const { data: games = [], isPending: gamesLoading } = useQuery({
@@ -225,6 +130,7 @@ export function StatsContent() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 
   const { data: genres = [] } = useQuery({
@@ -298,17 +204,18 @@ export function StatsContent() {
     return sessions.filter(
       (s: { game_id: string; created_at: string }) =>
         scopedGameIds.has(s.game_id) &&
-        inMonthYear(s.created_at, monthNum, yearNum),
+        recordMatchesPeriod(s.created_at, monthResolved, yearResolved),
     );
-  }, [sessions, scopedGameIds, monthNum, yearNum]);
+  }, [sessions, scopedGameIds, monthResolved, yearResolved]);
 
-  /** Sessões no ano do filtro (para gráficos mensais), com mesmo escopo de jogos. */
-  const sessionsInYearForCharts = useMemo(() => {
-    return sessions.filter(
-      (s: { game_id: string; created_at: string }) =>
-        scopedGameIds.has(s.game_id) && inYear(s.created_at, yearNum),
-    );
-  }, [sessions, scopedGameIds, yearNum]);
+  /** Sessões para gráficos mensais (ano escolhido ou todos os anos). */
+  const sessionsForMonthlyCharts = useMemo(() => {
+    return sessions.filter((s: { game_id: string; created_at: string }) => {
+      if (!scopedGameIds.has(s.game_id)) return false;
+      if (yearResolved === "all") return true;
+      return inCalendarYear(s.created_at, yearResolved);
+    });
+  }, [sessions, scopedGameIds, yearResolved]);
 
   const totalPlaytime = useMemo(
     () =>
@@ -321,14 +228,17 @@ export function StatsContent() {
   );
 
   const avgSessionScore = useMemo(() => {
-    if (sessionsInScope.length === 0) return 0;
+    const scored = sessionsInScope.filter(
+      (s: { score?: number | null }) => (s.score ?? 0) > 0,
+    );
+    if (scored.length === 0) return 0;
     return Number(
       (
-        sessionsInScope.reduce(
+        scored.reduce(
           (acc, s: { score?: number | null }) => acc + (s.score ?? 0),
           0,
-        ) / sessionsInScope.length
-      ).toFixed(1),
+        ) / scored.length
+      ).toFixed(2),
     );
   }, [sessionsInScope]);
 
@@ -336,9 +246,9 @@ export function StatsContent() {
     return reviews.filter(
       (r: { game_id: string; created_at: string }) =>
         scopedGameIds.has(r.game_id) &&
-        inMonthYear(r.created_at, monthNum, yearNum),
+        recordMatchesPeriod(r.created_at, monthResolved, yearResolved),
     );
-  }, [reviews, scopedGameIds, monthNum, yearNum]);
+  }, [reviews, scopedGameIds, monthResolved, yearResolved]);
 
   const avgReviewScore = useMemo(() => {
     if (reviewsInScope.length === 0) return 0;
@@ -348,7 +258,7 @@ export function StatsContent() {
           (acc, r: { score?: number | null }) => acc + (r.score ?? 0),
           0,
         ) / reviewsInScope.length
-      ).toFixed(1),
+      ).toFixed(2),
     );
   }, [reviewsInScope]);
 
@@ -360,10 +270,10 @@ export function StatsContent() {
 
   const monthlyHoursData = useMemo(() => {
     const secondsByMonthIdx: number[] = Array(12).fill(0);
-    sessionsInYearForCharts.forEach(
+    sessionsForMonthlyCharts.forEach(
       (s: { created_at: string; duration_seconds?: number | null }) => {
         const d = new Date(s.created_at);
-        if (d.getFullYear() !== yearNum) return;
+        if (yearResolved !== "all" && d.getFullYear() !== yearResolved) return;
         const idx = d.getMonth();
         secondsByMonthIdx[idx] += s.duration_seconds ?? 0;
       },
@@ -374,17 +284,17 @@ export function StatsContent() {
       hours: Number((secondsByMonthIdx[i] / 3600).toFixed(1)),
       totalSeconds: secondsByMonthIdx[i],
     }));
-  }, [sessionsInYearForCharts, yearNum]);
+  }, [sessionsForMonthlyCharts, yearResolved]);
 
   const monthlyGamesData = useMemo(() => {
     const sets: Array<Set<string>> = Array.from(
       { length: 12 },
       () => new Set(),
     );
-    sessionsInYearForCharts.forEach(
+    sessionsForMonthlyCharts.forEach(
       (s: { game_id: string; created_at: string }) => {
         const d = new Date(s.created_at);
-        if (d.getFullYear() !== yearNum) return;
+        if (yearResolved !== "all" && d.getFullYear() !== yearResolved) return;
         sets[d.getMonth()].add(s.game_id);
       },
     );
@@ -393,7 +303,7 @@ export function StatsContent() {
       monthIndex: i,
       games: sets[i].size,
     }));
-  }, [sessionsInYearForCharts, yearNum]);
+  }, [sessionsForMonthlyCharts, yearResolved]);
 
   /** Por mês (0–11): jogos ordenados por nº de sessões (maior → menor). */
   const gamesRankedBySessionsPerMonth = useMemo(() => {
@@ -401,10 +311,11 @@ export function StatsContent() {
       Array.from({ length: 12 }, () => []);
     for (let m = 0; m < 12; m++) {
       const agg: Record<string, number> = {};
-      sessionsInYearForCharts.forEach(
+      sessionsForMonthlyCharts.forEach(
         (s: { game_id: string; created_at: string }) => {
           const d = new Date(s.created_at);
-          if (d.getFullYear() !== yearNum || d.getMonth() !== m) return;
+          if (yearResolved !== "all" && d.getFullYear() !== yearResolved) return;
+          if (d.getMonth() !== m) return;
           agg[s.game_id] = (agg[s.game_id] || 0) + 1;
         },
       );
@@ -416,7 +327,7 @@ export function StatsContent() {
         .sort((a, b) => b.sessions - a.sessions);
     }
     return byMonth;
-  }, [sessionsInYearForCharts, yearNum, gamesById]);
+  }, [sessionsForMonthlyCharts, yearResolved, gamesById]);
 
   /** Por mês (0–11): jogos ordenados por tempo jogado (maior → menor). */
   const gamesRankedByTimePerMonth = useMemo(() => {
@@ -424,14 +335,15 @@ export function StatsContent() {
       Array.from({ length: 12 }, () => []);
     for (let m = 0; m < 12; m++) {
       const agg: Record<string, number> = {};
-      sessionsInYearForCharts.forEach(
+      sessionsForMonthlyCharts.forEach(
         (s: {
           game_id: string;
           created_at: string;
           duration_seconds?: number | null;
         }) => {
           const d = new Date(s.created_at);
-          if (d.getFullYear() !== yearNum || d.getMonth() !== m) return;
+          if (yearResolved !== "all" && d.getFullYear() !== yearResolved) return;
+          if (d.getMonth() !== m) return;
           agg[s.game_id] = (agg[s.game_id] || 0) + (s.duration_seconds ?? 0);
         },
       );
@@ -443,7 +355,7 @@ export function StatsContent() {
         .sort((a, b) => b.seconds - a.seconds);
     }
     return byMonth;
-  }, [sessionsInYearForCharts, yearNum, gamesById]);
+  }, [sessionsForMonthlyCharts, yearResolved, gamesById]);
 
   /** Por gênero: jogos ordenados por sessões (maior → menor). */
   const gamesRankedBySessionsPerGenre = useMemo(() => {
@@ -719,6 +631,7 @@ export function StatsContent() {
             placeholder="Digite ou escolha o mês…"
             maxVisible={12}
             dropdownClassName="max-h-72"
+            onClear={() => setMonthText(FILTER_MONTH_ALL_LABEL)}
           />
         </div>
         <div className="space-y-1.5 min-w-[6.5rem] flex-1 max-w-[8rem]">
@@ -732,9 +645,10 @@ export function StatsContent() {
             id="stats-filter-year"
             value={yearText}
             onChange={setYearText}
-            suggestions={yearSuggestItems}
+            suggestions={yearSuggestItemsList}
             placeholder="Digite ou escolha o ano…"
             maxVisible={12}
+            onClear={() => setYearText(String(currentYear))}
           />
         </div>
       </div>
@@ -747,12 +661,12 @@ export function StatsContent() {
         />
         <MetricCard
           label="Média sessões"
-          value={isLoading ? "—" : avgSessionScore.toFixed(1)}
+          value={isLoading ? "—" : avgSessionScore.toFixed(2)}
           icon={Activity}
         />
         <MetricCard
           label="Média reviews"
-          value={isLoading ? "—" : avgReviewScore.toFixed(1)}
+          value={isLoading ? "—" : avgReviewScore.toFixed(2)}
           icon={Star}
         />
         <MetricCard
@@ -764,14 +678,15 @@ export function StatsContent() {
 
       <p className="text-xs text-muted-foreground">
         Os cartões e donuts usam o mês e ano dos filtros. Os gráficos de barras
-        mensais usam o ano{" "}
-        <span className="font-medium tabular-nums">{yearNum}</span> com busca e
-        gênero (Janeiro a Dezembro).
+        mensais agregam Janeiro a Dezembro para{" "}
+        <span className="font-medium tabular-nums">{monthlyChartYearLabel}</span>{" "}
+        (com busca e gênero). Em &quot;Todos os anos&quot;, cada mês soma todas
+        as sessões desse mês em qualquer ano.
       </p>
 
       <div className="w-full rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm">
         <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Jogos distintos por mês ({yearNum})
+          Jogos distintos por mês ({monthlyChartYearLabel})
         </h3>
         <div className="h-[280px] w-full">
           {isLoading ? (
@@ -865,7 +780,7 @@ export function StatsContent() {
 
       <div className="w-full rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm">
         <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Horas/minutos por mês ({yearNum})
+          Horas/minutos por mês ({monthlyChartYearLabel})
         </h3>
         <div className="h-[280px] w-full">
           {isLoading ? (
@@ -1246,7 +1161,7 @@ export function StatsContent() {
                     <td className="px-4 py-3 text-center align-middle text-sm font-medium tabular-nums">
                       {game.avg_session_score > 0 ? (
                         <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
-                          {game.avg_session_score.toFixed(1)}
+                          {formatNumericScore(game.avg_session_score, 2)}
                         </span>
                       ) : (
                         "—"
@@ -1255,7 +1170,7 @@ export function StatsContent() {
                     <td className="px-4 py-3 text-center align-middle text-sm font-medium tabular-nums">
                       {game.avg_review_score > 0 ? (
                         <span className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
-                          {game.avg_review_score.toFixed(1)}
+                          {formatNumericScore(game.avg_review_score, 2)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -1273,8 +1188,8 @@ export function StatsContent() {
         open={historyDrawer.open}
         onOpenChange={(o) => setHistoryDrawer({ ...historyDrawer, open: o })}
         gameId={historyDrawer.gameId}
-        periodMonth={monthNum}
-        periodYear={yearNum}
+        periodMonth={monthResolved}
+        periodYear={yearResolved}
       />
     </div>
   );

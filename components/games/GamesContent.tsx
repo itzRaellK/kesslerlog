@@ -28,7 +28,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
+import { formatNumericScore } from "@/lib/format";
 import { splitGenreNamesLabel } from "@/lib/game-genres";
+import { useLifetimeGameStatsMap } from "@/hooks/use-lifetime-game-stats-map";
 
 const GAMES_TABLE_PAGE_SIZE = 10;
 
@@ -57,6 +59,7 @@ export function GamesContent() {
       queryClient.invalidateQueries({ queryKey: ["games"] });
       queryClient.invalidateQueries({ queryKey: ["games_with_details"] });
       queryClient.invalidateQueries({ queryKey: ["game_external_scores"] });
+      queryClient.invalidateQueries({ queryKey: ["lifetime_game_stats_map"] });
       setGameToDelete(null);
     },
   });
@@ -94,6 +97,8 @@ export function GamesContent() {
     });
     return Array.from(seen).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [games]);
+
+  const { data: lifetimeByGame = {} } = useLifetimeGameStatsMap();
 
   const { data: externalScoresMap } = useQuery({
     queryKey: ["game_external_scores"],
@@ -307,10 +312,12 @@ export function GamesContent() {
                   game_image_url: string | null;
                 },
                 index: number,
-              ) => (
+              ) => {
+                const wl = lifetimeByGame[item.game_id];
+                return (
                 <div
                   key={item.id}
-                  className="flex h-[3.25rem] min-w-0 max-w-full items-center gap-2 rounded-xl border border-emerald-500/20 bg-card px-2.5 py-2 shadow-sm"
+                  className="flex min-h-[3.25rem] min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-emerald-500/20 bg-card px-2.5 py-2 shadow-sm"
                 >
                   <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
                     #{index + 1}
@@ -327,6 +334,20 @@ export function GamesContent() {
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {item.game_title}
                   </span>
+                  {(wl?.avgReviewScore ?? 0) > 0 ||
+                  (wl?.avgSessionScore ?? 0) > 0 ? (
+                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                      {wl && wl.avgSessionScore > 0 ? (
+                        <>⌀ sess. {wl.avgSessionScore.toFixed(2)}</>
+                      ) : null}
+                      {wl && wl.avgSessionScore > 0 && wl.avgReviewScore > 0
+                        ? " · "
+                        : null}
+                      {wl && wl.avgReviewScore > 0 ? (
+                        <>⌀ rev. {wl.avgReviewScore.toFixed(2)}</>
+                      ) : null}
+                    </span>
+                  ) : null}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -338,7 +359,8 @@ export function GamesContent() {
                     <ListX className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              ),
+              );
+              },
             )}
           </div>
         </section>
@@ -352,6 +374,12 @@ export function GamesContent() {
               <th className="px-4 py-3 text-center font-medium">Gênero</th>
               <th className="px-4 py-3 text-center font-medium">
                 Notas Externas
+              </th>
+              <th className="px-4 py-3 text-center font-medium">
+                Média sessão
+              </th>
+              <th className="px-4 py-3 text-center font-medium">
+                Média review
               </th>
               <th className="px-4 py-3 text-center font-medium">Ações</th>
             </tr>
@@ -370,6 +398,7 @@ export function GamesContent() {
                 background_image_url?: string | null;
               }) => {
                 const externalScores = externalScoresMap?.[game.id] ?? [];
+                const life = lifetimeByGame[game.id];
                 return (
                   <tr
                     key={game.id}
@@ -415,7 +444,7 @@ export function GamesContent() {
                           >
                             {es.source}{" "}
                             <span className="ml-1 font-semibold tabular-nums">
-                              {es.score}
+                              {formatNumericScore(es.score, 2)}
                             </span>
                           </span>
                         ))}
@@ -425,6 +454,16 @@ export function GamesContent() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-center align-middle text-sm tabular-nums text-muted-foreground">
+                      {life && life.avgSessionScore > 0
+                        ? life.avgSessionScore.toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center align-middle text-sm tabular-nums text-muted-foreground">
+                      {life && life.avgReviewScore > 0
+                        ? life.avgReviewScore.toFixed(2)
+                        : "—"}
                     </td>
                     <td className="px-4 py-3 text-center align-middle">
                       <div className="flex items-center justify-center gap-1">

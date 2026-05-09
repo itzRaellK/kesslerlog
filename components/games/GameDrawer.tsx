@@ -23,7 +23,11 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration } from "@/lib/format";
+import {
+  formatDuration,
+  formatNumericScore,
+  parseNumericScore,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DRAWER_SHEET_CONTENT_CLASS } from "@/lib/drawer-sheet";
 import { toastSuccess, toastError, getErrorMessage } from "@/lib/toast";
@@ -518,8 +522,9 @@ export function GameDrawer({
                               Média
                             </span>
                             <span className="font-semibold tabular-nums text-foreground">
-                              {(cycle.avg_session_score ?? 0) > 0
-                                ? cycle.avg_session_score.toFixed(1)
+                              {(parseNumericScore(cycle.avg_session_score) ?? 0) >
+                              0
+                                ? formatNumericScore(cycle.avg_session_score, 2)
                                 : "—"}
                             </span>
                           </div>
@@ -783,7 +788,7 @@ export function GameDrawer({
                                   {formatDuration(session.duration_seconds)}
                                 </span>
                                 <span className="font-semibold tabular-nums text-foreground">
-                                  {session.score.toFixed(1)}
+                                  {formatNumericScore(session.score, 2)}
                                 </span>
                                 <p
                                   className={cn(
@@ -814,7 +819,7 @@ export function GameDrawer({
                                   {cycle.review.badge_name}
                                 </Badge>
                                 <span className="text-sm font-semibold tabular-nums text-foreground">
-                                  {cycle.review.score.toFixed(1)}
+                                  {formatNumericScore(cycle.review.score, 2)}
                                 </span>
                               </div>
                             </div>
